@@ -38,6 +38,14 @@ app.use('/api', apiLimiter);
 // Serve static uploads
 app.use('/uploads', express.static(path.resolve(env.UPLOAD_PATH)));
 
+// Root Endpoint
+app.get('/', (req, res) => {
+  return ApiResponse.success(res, 'Renuka Billing & Paramedical API is operational', {
+    health: '/health',
+    apiBase: '/api/v1',
+  });
+});
+
 // Health Check Endpoint
 app.get('/health', (req, res) => {
   return ApiResponse.success(res, 'Backend service is healthy and operational', {
