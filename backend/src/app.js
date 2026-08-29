@@ -9,6 +9,7 @@ import { errorHandler } from './middleware/error-handler.js';
 import { apiLimiter } from './middleware/rate-limiter.js';
 import routes from './routes/index.js';
 import { ApiResponse } from './utils/api-response.js';
+import { logger } from './config/logger.js';
 
 const app = express();
 
@@ -18,10 +19,9 @@ app.use(helmet({
 }));
 
 const allowedOrigins = env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',');
+logger.info(`Allowed Origins: ${JSON.stringify(allowedOrigins)}`);
 app.use(cors({
   origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Performance & Parsing

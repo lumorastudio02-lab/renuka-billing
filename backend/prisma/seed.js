@@ -1,44 +1,65 @@
-import { PrismaClient } from '@prisma/client';
+import prismaPkg from '@prisma/client';
+const { PrismaClient } = prismaPkg;
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting database seeding...');
 
-  // Create Roles
-  const adminRole = await prisma.role.upsert({
+  // Create Roles without using upsert (avoiding transactions/replica set requirement)
+  let adminRole = await prisma.role.findUnique({
     where: { name: 'ADMIN' },
-    update: {},
-    create: {
-      name: 'ADMIN',
-      permissions: ['ALL'],
-    },
   });
 
-  await prisma.role.upsert({
+  if (!adminRole) {
+    adminRole = await prisma.role.create({
+      data: {
+        name: 'ADMIN',
+        permissions: ['ALL'],
+      },
+    });
+  }
+
+  let staffRole = await prisma.role.findUnique({
     where: { name: 'STAFF' },
-    update: {},
-    create: {
-      name: 'STAFF',
-      permissions: ['READ_STUDENTS', 'WRITE_PAYMENTS'],
-    },
   });
+
+  if (!staffRole) {
+    await prisma.role.create({
+      data: {
+        name: 'STAFF',
+        permissions: ['READ_STUDENTS', 'WRITE_PAYMENTS'],
+      },
+    });
+  }
 
   // Create Default Admin User
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash('admin123', salt);
 
-  const adminUser = await prisma.user.upsert({
+  let adminUser = await prisma.user.findUnique({
     where: { username: 'admin' },
-    update: { passwordHash },
-    create: {
-      username: 'admin',
-      email: 'admin@renukaparamedical.com',
-      passwordHash,
-      roleId: adminRole.id,
-    },
   });
+
+  if (!adminUser) {
+    adminUser = await prisma.user.create({
+      data: {
+        username: 'admin',
+        email: 'admin@renukaparamedical.com',
+        passwordHash,
+        roleId: adminRole.id,
+      },
+    });
+  } else {
+    adminUser = await prisma.user.update({
+      where: { username: 'admin' },
+      data: { passwordHash },
+    });
+  }
 
   console.log(`Default Admin User created: ${adminUser.username} (password: admin123)`);
 

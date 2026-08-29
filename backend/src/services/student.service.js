@@ -5,21 +5,24 @@ import { formatStudentId, calculateDueStatus } from '../utils/formatters.js';
 export class StudentService {
   static async getAllStudents({ query, course, batch }) {
     const where = {
-      deletedAt: null,
+      OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
       ...(course ? { course } : {}),
       ...(batch ? { batch } : {}),
-      ...(query
-        ? {
-            OR: [
-              { name: { contains: query, mode: 'insensitive' } },
-              { studentCode: { contains: query, mode: 'insensitive' } },
-              { mobile: { contains: query, mode: 'insensitive' } },
-              { course: { contains: query, mode: 'insensitive' } },
-              { batch: { contains: query, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
     };
+
+    if (query) {
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { studentCode: { contains: query, mode: 'insensitive' } },
+            { mobile: { contains: query, mode: 'insensitive' } },
+            { course: { contains: query, mode: 'insensitive' } },
+            { batch: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
 
     let students = [];
     try {

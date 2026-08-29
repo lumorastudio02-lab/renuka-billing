@@ -23,6 +23,10 @@ backend/.env
 frontend/.env
 *.env.local
 
+# Database data
+db_data/
+backend/db_data/
+
 # Editor & OS
 .vscode/*
 !.vscode/extensions.json

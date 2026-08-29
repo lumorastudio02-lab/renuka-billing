@@ -156,13 +156,52 @@ let stateCache: {
   authToken: isBrowser() ? localStorage.getItem("ifms_token") : null,
 };
 
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = stateCache.authToken || (isBrowser() ? localStorage.getItem("ifms_token") : null);
+export async function ensureAuthenticated(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "admin", password: "admin123" }),
+    });
+    const data = await res.json();
+    if (data.data?.tokens?.accessToken) {
+      const token = data.data.tokens.accessToken;
+      stateCache.authToken = token;
+      if (isBrowser()) {
+        localStorage.setItem("ifms_token", token);
+        localStorage.setItem("ifms_auth", "1");
+      }
+      return token;
+    }
+  } catch (e) {
+    console.error("Failed auto authentication:", e);
+  }
+  return null;
+}
+
+export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  let token = stateCache.authToken || (isBrowser() ? localStorage.getItem("ifms_token") : null);
+  if (!token) {
+    token = await ensureAuthenticated();
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((options.headers as Record<string, string>) || {}),
+  };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  return headers;
+
+  let res = await fetch(url, { ...options, headers }).catch(() => null);
+  if (res && res.status === 401) {
+    token = await ensureAuthenticated();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      res = await fetch(url, { ...options, headers }).catch(() => null);
+    }
+  }
+  return res || new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
 }
 
 function notify() {
@@ -172,13 +211,11 @@ function notify() {
 
 export async function fetchAppData(): Promise<void> {
   try {
-    const headers = getAuthHeaders();
-
     const [stRes, payRes, expRes, setRes] = await Promise.all([
-      fetch(`${API_BASE}/students`, { headers }).catch(() => null),
-      fetch(`${API_BASE}/payments`, { headers }).catch(() => null),
-      fetch(`${API_BASE}/expenses`, { headers }).catch(() => null),
-      fetch(`${API_BASE}/settings`, { headers }).catch(() => null),
+      fetchWithAuth(`${API_BASE}/students`),
+      fetchWithAuth(`${API_BASE}/payments`),
+      fetchWithAuth(`${API_BASE}/expenses`),
+      fetchWithAuth(`${API_BASE}/settings`),
     ]);
 
     if (stRes && stRes.ok) {
@@ -207,24 +244,6 @@ export async function fetchAppData(): Promise<void> {
   } catch (error) {
     console.error("Failed to sync with MongoDB Atlas API:", error);
   }
-}
-
-// Ensure token is fetched automatically if missing
-if (isBrowser() && !stateCache.authToken) {
-  fetch(`${API_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: "admin", password: "admin123" }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.data?.tokens?.accessToken) {
-        stateCache.authToken = data.data.tokens.accessToken;
-        localStorage.setItem("ifms_token", data.data.tokens.accessToken);
-        fetchAppData();
-      }
-    })
-    .catch(() => {});
 }
 
 // -----------------------------------------
@@ -270,9 +289,8 @@ export function saveStudent(student: Student): void {
   }
   notify();
 
-  fetch(`${API_BASE}/students`, {
+  fetchWithAuth(`${API_BASE}/students`, {
     method: "POST",
-    headers: getAuthHeaders(),
     body: JSON.stringify(student),
   })
     .then(() => fetchAppData())
@@ -284,9 +302,8 @@ export function deleteStudent(id: string): void {
   stateCache.payments = stateCache.payments.filter((p) => p.studentId !== id);
   notify();
 
-  fetch(`${API_BASE}/students/${id}`, {
+  fetchWithAuth(`${API_BASE}/students/${id}`, {
     method: "DELETE",
-    headers: getAuthHeaders(),
   })
     .then(() => fetchAppData())
     .catch((err) => console.error("Error deleting student from MongoDB Atlas:", err));
@@ -333,9 +350,8 @@ export function addPayment(input: {
   stateCache.payments.unshift(payment);
   notify();
 
-  fetch(`${API_BASE}/payments`, {
+  fetchWithAuth(`${API_BASE}/payments`, {
     method: "POST",
-    headers: getAuthHeaders(),
     body: JSON.stringify(input),
   })
     .then(() => fetchAppData())
@@ -351,9 +367,8 @@ export function updatePayment(input: Payment): Payment {
   }
   notify();
 
-  fetch(`${API_BASE}/payments/${input.id}`, {
+  fetchWithAuth(`${API_BASE}/payments/${input.id}`, {
     method: "PUT",
-    headers: getAuthHeaders(),
     body: JSON.stringify(input),
   })
     .then(() => fetchAppData())
@@ -366,9 +381,8 @@ export function deletePayment(id: string): void {
   stateCache.payments = stateCache.payments.filter((p) => p.id !== id);
   notify();
 
-  fetch(`${API_BASE}/payments/${id}`, {
+  fetchWithAuth(`${API_BASE}/payments/${id}`, {
     method: "DELETE",
-    headers: getAuthHeaders(),
   })
     .then(() => fetchAppData())
     .catch((err) => console.error("Error deleting payment from MongoDB Atlas:", err));
@@ -386,9 +400,8 @@ export function saveExpense(expense: Expense): void {
   }
   notify();
 
-  fetch(`${API_BASE}/expenses`, {
+  fetchWithAuth(`${API_BASE}/expenses`, {
     method: "POST",
-    headers: getAuthHeaders(),
     body: JSON.stringify(expense),
   })
     .then(() => fetchAppData())
@@ -399,9 +412,8 @@ export function deleteExpense(id: string): void {
   stateCache.expenses = stateCache.expenses.filter((e) => e.id !== id);
   notify();
 
-  fetch(`${API_BASE}/expenses/${id}`, {
+  fetchWithAuth(`${API_BASE}/expenses/${id}`, {
     method: "DELETE",
-    headers: getAuthHeaders(),
   })
     .then(() => fetchAppData())
     .catch((err) => console.error("Error deleting expense from MongoDB Atlas:", err));
@@ -414,9 +426,8 @@ export function saveSettings(s: Settings): void {
   stateCache.settings = s;
   notify();
 
-  fetch(`${API_BASE}/settings`, {
+  fetchWithAuth(`${API_BASE}/settings`, {
     method: "PUT",
-    headers: getAuthHeaders(),
     body: JSON.stringify(s),
   })
     .then(() => fetchAppData())
