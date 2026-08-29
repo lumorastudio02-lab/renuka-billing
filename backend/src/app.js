@@ -18,11 +18,25 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
-const allowedOrigins = env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',');
-logger.info(`Allowed Origins: ${JSON.stringify(allowedOrigins)}`);
-app.use(cors({
-  origin: allowedOrigins,
-}));
+// Dynamic CORS & Preflight Support
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (env.CORS_ORIGIN === '*') return callback(null, true);
+
+    const origins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+    if (origins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Performance & Parsing
 app.use(compression());
