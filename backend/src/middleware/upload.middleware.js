@@ -4,9 +4,14 @@ import fs from 'fs';
 import { ApiError } from '../utils/api-error.js';
 import { env } from '../config/env.js';
 
-const uploadDir = env.UPLOAD_PATH;
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = process.env.VERCEL ? '/tmp/uploads' : (env.UPLOAD_PATH || 'uploads/');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (error) {
+  // Gracefully handle read-only file systems in serverless environments
 }
 
 const storage = multer.diskStorage({
