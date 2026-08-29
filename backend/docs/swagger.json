@@ -1,0 +1,94 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Renuka Paramedical Institute Fee Dashboard API",
+    "description": "Enterprise Production-Ready REST API Backend supporting all frontend fee management features.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Admin / Staff Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "admin" },
+                  "password": { "type": "string", "example": "admin123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful returning access & refresh tokens" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/students": {
+      "get": {
+        "summary": "List & Filter Students",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "course", "in": "query", "schema": { "type": "string" } },
+          { "name": "batch", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Array of student records with calculated payment status" }
+        }
+      },
+      "post": {
+        "summary": "Add or Update Student",
+        "responses": {
+          "200": { "description": "Student created or updated" }
+        }
+      }
+    },
+    "/payments": {
+      "get": {
+        "summary": "List Payments",
+        "responses": {
+          "200": { "description": "Array of payment history records" }
+        }
+      },
+      "post": {
+        "summary": "Record Fee Payment",
+        "responses": {
+          "201": { "description": "Payment created and receipt generated" }
+        }
+      }
+    },
+    "/dashboard/overview": {
+      "get": {
+        "summary": "Dashboard Analytics & Summaries",
+        "responses": {
+          "200": { "description": "Metric summaries and due date reminders" }
+        }
+      }
+    }
+  }
+}

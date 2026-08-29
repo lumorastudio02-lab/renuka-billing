@@ -84,7 +84,7 @@ export function buildReceiptDoc(student: Student, payment: Payment) {
 
   doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(0);
   doc.text(
-    "Once the fee is paid, it will not be refunded under any circumstances.”",
+    "एकदा भरलेली फी कोणत्याही कारणास्तव परत मिळणार नाही",
     W / 2,
     y + 34,
     { align: "center" },

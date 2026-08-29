@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPayments, getSettings, getStudents } from "./store";
+import { fetchAppData, getPayments, getSettings, getStudents } from "./store";
 
 export function useAppData() {
   const [tick, setTick] = useState(0);
@@ -7,6 +7,8 @@ export function useAppData() {
 
   useEffect(() => {
     setMounted(true);
+    fetchAppData();
+
     const onChange = () => setTick((t) => t + 1);
     window.addEventListener("ifms-change", onChange);
     window.addEventListener("storage", onChange);
@@ -16,12 +18,17 @@ export function useAppData() {
     };
   }, []);
 
+  const refresh = () => {
+    fetchAppData();
+    setTick((t) => t + 1);
+  };
+
   return {
     mounted,
     tick,
     students: mounted ? getStudents() : [],
     payments: mounted ? getPayments() : [],
     settings: getSettings(),
-    refresh: () => setTick((t) => t + 1),
+    refresh,
   };
 }

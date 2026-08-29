@@ -1,0 +1,163 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PaymentMode {
+  Cash
+  UPI
+  Bank_Transfer
+}
+
+enum ExpenseCategory {
+  Utilities
+  Salary
+  Rent
+  Supplies
+  Marketing
+  Travel
+  Other
+}
+
+enum RoleName {
+  ADMIN
+  MANAGER
+  STAFF
+  USER
+}
+
+model Role {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        RoleName @unique
+  permissions String[]
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  username     String    @unique
+  email        String?   @unique
+  passwordHash String
+  isActive     Boolean   @default(true)
+  roleId       String    @db.ObjectId
+  role         Role      @relation(fields: [roleId], references: [id])
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  isRevoked    Boolean  @default(false)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model Student {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  studentCode    String    @unique
+  name           String
+  mobile         String
+  email          String?
+  course         String
+  batch          String
+  admissionDate  DateTime
+  instalmentDate DateTime?
+  totalFee       Float
+  paidFee        Float     @default(0)
+  nextDueDate    DateTime?
+  deletedAt      DateTime?
+  payments       Payment[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([course, batch])
+  @@index([nextDueDate])
+  @@map("students")
+}
+
+model Payment {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  receiptNo      String      @unique
+  studentId      String      @db.ObjectId
+  student        Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount         Float
+  date           DateTime
+  mode           PaymentMode
+  upiReference   String?
+  nextDueDate    DateTime?
+  previouslyPaid Float
+  remainingAfter Float
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([studentId])
+  @@index([date])
+  @@map("payments")
+}
+
+model Expense {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  amount    Float
+  date      DateTime
+  category  ExpenseCategory @default(Other)
+  note      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([category])
+  @@index([date])
+  @@map("expenses")
+}
+
+model InstituteSetting {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  instituteName String
+  logoUrl       String?
+  address       String
+  mobile        String
+  email         String
+  updatedAt     DateTime @updatedAt
+
+  @@map("institute_settings")
+}
+
+model ActivityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}

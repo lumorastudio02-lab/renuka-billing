@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "Renuka Paramedical Fee Dashboard Backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+        },
+        "url": { "raw": "http://localhost:5000/api/v1/auth/login" }
+      }
+    },
+    {
+      "name": "Dashboard - Overview",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:5000/api/v1/dashboard/overview" }
+      }
+    },
+    {
+      "name": "Students - Get All",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:5000/api/v1/students" }
+      }
+    },
+    {
+      "name": "Students - Save",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rahul Sharma\",\n  \"mobile\": \"9876543210\",\n  \"course\": \"DMLT\",\n  \"batch\": \"Batch 1\",\n  \"admissionDate\": \"2026-08-01\",\n  \"totalFee\": 45000\n}"
+        },
+        "url": { "raw": "http://localhost:5000/api/v1/students" }
+      }
+    },
+    {
+      "name": "Payments - Add Payment",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"STU-001\",\n  \"amount\": 15000,\n  \"date\": \"2026-08-29\",\n  \"mode\": \"UPI\",\n  \"upiReference\": \"UPI987654321\",\n  \"nextDueDate\": \"2026-09-15\"\n}"
+        },
+        "url": { "raw": "http://localhost:5000/api/v1/payments" }
+      }
+    }
+  ]
+}
