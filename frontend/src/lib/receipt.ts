@@ -23,6 +23,29 @@ async function loadDefaultLogo() {
   return defaultLogoData;
 }
 
+function renderMarathiTextImage(text: string): string {
+  if (typeof document === "undefined") return "";
+  try {
+    const scale = 4;
+    const canvas = document.createElement("canvas");
+    canvas.width = 600 * scale;
+    canvas.height = 36 * scale;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+
+    ctx.scale(scale, scale);
+    ctx.font = "bold 13px Arial, 'Noto Sans Devanagari', 'Mangal', 'Lohit Devanagari', sans-serif";
+    ctx.fillStyle = "#111827";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 300, 18);
+
+    return canvas.toDataURL("image/png");
+  } catch {
+    return "";
+  }
+}
+
 export function buildReceiptDoc(student: Student, payment: Payment) {
   const s = getSettings();
   const logo = s.logo || defaultLogoData;
@@ -82,13 +105,14 @@ export function buildReceiptDoc(student: Student, payment: Payment) {
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(120);
   doc.text("This is a computer generated receipt.", 40, y + 16);
 
-  doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(0);
-  doc.text(
-    "एकदा भरलेली फी कोणत्याही कारणास्तव परत मिळणार नाही",
-    W / 2,
-    y + 34,
-    { align: "center" },
-  );
+  const marathiImg = renderMarathiTextImage("एकदा भरलेली फी कोणत्याही कारणास्तव परत मिळणार नाही.");
+  if (marathiImg) {
+    try {
+      doc.addImage(marathiImg, "PNG", W / 2 - 250, y + 18, 500, 30);
+    } catch {
+      /* ignore canvas error */
+    }
+  }
 
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(120);
   doc.text("Authorised Signatory", W - 40, y + 16, { align: "right" });
