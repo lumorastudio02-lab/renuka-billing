@@ -8,7 +8,7 @@ let authToken = '';
 test('Setup authentication token', async () => {
   const res = await supertest(app)
     .post('/api/v1/auth/login')
-    .send({ username: 'admin', password: 'admin123' });
+    .send({ username: 'admin', password: 'Renuka@2143' });
   authToken = res.body.data.tokens.accessToken;
 });
 

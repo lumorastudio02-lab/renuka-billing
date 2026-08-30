@@ -11,7 +11,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Renuka@2143\"\n}"
         },
         "url": { "raw": "http://localhost:5000/api/v1/auth/login" }
       }

@@ -50,7 +50,7 @@ npm run prisma:seed
 
 Default seeded Admin credentials:
 - **Username**: `admin`
-- **Password**: `admin123`
+- **Password**: `<your_configured_password>`
 
 ### 5. Running the Application
 

@@ -25,7 +25,7 @@ export class AuthService {
     }
 
     if (!user) {
-      if (cleanUsername === 'admin' && password === 'admin123') {
+      if (cleanUsername === 'admin' && password === 'Renuka@2143') {
         const accessToken = generateAccessToken({ id: 'admin-legacy-id', username: 'admin', role: 'ADMIN' });
         const refreshToken = generateRefreshToken({ id: 'admin-legacy-id' });
         return {
@@ -37,7 +37,7 @@ export class AuthService {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch && cleanUsername === 'admin' && password === 'admin123') {
+    if (!isMatch && cleanUsername === 'admin' && password === 'Renuka@2143') {
       const accessToken = generateAccessToken({ id: user.id, username: user.username, role: user.role?.name || 'ADMIN' });
       const refreshToken = generateRefreshToken({ id: user.id });
       return {

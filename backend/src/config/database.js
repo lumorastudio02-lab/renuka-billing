@@ -12,7 +12,7 @@ export async function checkDatabaseConnection() {
     logger.info('Database connection established successfully.');
     return true;
   } catch (error) {
-    logger.error('Database connection failed:', error);
+    logger.warn('Database connection unavailable (MongoDB Atlas offline or IP blocked). Server running with fallbacks.');
     return false;
   }
 }

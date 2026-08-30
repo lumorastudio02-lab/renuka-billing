@@ -39,7 +39,7 @@ async function main() {
 
   // Create Default Admin User
   const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash('admin123', salt);
+  const passwordHash = await bcrypt.hash('Renuka@2143', salt);
 
   let adminUser = await prisma.user.findUnique({
     where: { username: 'admin' },
@@ -61,7 +61,7 @@ async function main() {
     });
   }
 
-  console.log(`Default Admin User created: ${adminUser.username} (password: admin123)`);
+  console.log(`Default Admin User created: ${adminUser.username} (password: Renuka@2143)`);
 
   // Create Default Institute Settings
   const existingSettings = await prisma.instituteSetting.findFirst();

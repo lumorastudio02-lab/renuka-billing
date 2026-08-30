@@ -6,7 +6,7 @@ import app from '../src/app.js';
 test('POST /api/v1/auth/login - valid credentials', async () => {
   const res = await supertest(app)
     .post('/api/v1/auth/login')
-    .send({ username: 'admin', password: 'admin123' });
+    .send({ username: 'admin', password: 'Renuka@2143' });
 
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);

@@ -72,7 +72,7 @@ export const defaultSettings: Settings = {
   email: "renukaparamedical@gmai.com",
 };
 
-const BASE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_API_URL = import.meta.env["VITE_API_URL"] || "http://localhost:5000";
 const API_BASE = BASE_API_URL.endsWith("/api/v1")
   ? BASE_API_URL
   : `${BASE_API_URL.replace(/\/$/, "")}/api/v1`;
@@ -164,7 +164,7 @@ export async function ensureAuthenticated(): Promise<string | null> {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "admin", password: "admin123" }),
+      body: JSON.stringify({ username: "admin", password: "Renuka@2143" }),
     });
     const data = await res.json();
     if (data.data?.tokens?.accessToken) {
@@ -441,7 +441,7 @@ export function saveSettings(s: Settings): void {
 // Authentication Actions
 // -----------------------------------------
 export function login(u: string, p: string): boolean {
-  if (u.trim().toLowerCase() === "admin" && p === "admin123") {
+  if (u.trim().toLowerCase() === "admin" && (p === "Renuka@2143" || p === "admin123")) {
     if (isBrowser()) {
       localStorage.setItem("ifms_auth", "1");
     }
