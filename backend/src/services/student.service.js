@@ -6,6 +6,8 @@ import { PaymentService } from './payment.service.js';
 export class StudentService {
   static async syncMissingInitialPayments() {
     try {
+      await this.migrateLegacyStudentCodes();
+
       const students = await prisma.student.findMany({
         where: { OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }] },
         include: { payments: true },
@@ -16,6 +18,29 @@ export class StudentService {
       }
     } catch (err) {
       console.error('Error syncing missing initial payments:', err);
+    }
+  }
+
+  static async migrateLegacyStudentCodes() {
+    try {
+      const legacyStudents = await prisma.student.findMany({
+        where: {
+          OR: [
+            { studentCode: { startsWith: 'STU-' } },
+            { studentCode: '' },
+          ],
+        },
+      });
+
+      for (const s of legacyStudents) {
+        const newCode = await this.getNextStudentId(s.course);
+        await prisma.student.update({
+          where: { id: s.id },
+          data: { studentCode: newCode },
+        });
+      }
+    } catch (err) {
+      console.error('Error migrating legacy student codes:', err);
     }
   }
 
@@ -81,6 +106,7 @@ export class StudentService {
             { studentCode: { contains: query, mode: 'insensitive' } },
             { mobile: { contains: query, mode: 'insensitive' } },
             { course: { contains: query, mode: 'insensitive' } },
+            { year: { contains: query, mode: 'insensitive' } },
             { batch: { contains: query, mode: 'insensitive' } },
           ],
         },
@@ -116,6 +142,7 @@ export class StudentService {
       mobile: s.mobile,
       email: s.email || '',
       course: s.course,
+      year: s.year || '',
       batch: s.batch,
       admissionDate: formatDateStr(s.admissionDate) || new Date().toISOString().slice(0, 10),
       instalmentDate: formatDateStr(s.instalmentDate),
@@ -126,37 +153,51 @@ export class StudentService {
     }));
   }
 
-  static async getNextStudentId() {
+  static async getNextStudentId(course) {
+    const prefix = (course && course.trim() ? course.trim().charAt(0) : 'S').toUpperCase();
     const students = await prisma.student.findMany({
       select: { studentCode: true },
     });
 
     const max = students.reduce((m, s) => {
-      const n = parseInt((s.studentCode || '').replace(/\D/g, ''), 10);
-      return isNaN(n) ? m : Math.max(m, n);
+      if (!s.studentCode) return m;
+      const code = s.studentCode.trim().toUpperCase();
+      if (code.startsWith(prefix)) {
+        const numPart = code.slice(prefix.length).replace(/\D/g, '');
+        const n = parseInt(numPart, 10);
+        return isNaN(n) ? m : Math.max(m, n);
+      }
+      return m;
     }, 0);
 
-    return formatStudentId(max + 1);
+    return formatStudentId(max + 1, course);
   }
 
   static async saveStudent(data) {
     const totalFee = Number(data.totalFee) || 0;
     const paidFee = Number(data.paidFee) || 0;
 
-    let studentCode = data.id;
-    if (!studentCode || !studentCode.startsWith('STU-')) {
-      studentCode = await this.getNextStudentId();
-    }
-
     const isObjectId = (val) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val);
 
-    const orConditions = [{ studentCode }];
-    if (data.id) orConditions.push({ studentCode: data.id });
-    if (isObjectId(data.id)) orConditions.push({ id: data.id });
+    const searchConditions = [];
+    if (data.id) searchConditions.push({ studentCode: data.id });
+    if (isObjectId(data.id)) searchConditions.push({ id: data.id });
 
-    const existing = await prisma.student.findFirst({
-      where: { OR: orConditions },
-    });
+    let existing = null;
+    if (searchConditions.length > 0) {
+      existing = await prisma.student.findFirst({
+        where: { OR: searchConditions },
+      });
+    }
+
+    let studentCode = data.id;
+    const expectedPrefix = (data.course && data.course.trim() ? data.course.trim().charAt(0) : 'S').toUpperCase();
+
+    if (existing && existing.studentCode && !existing.studentCode.startsWith('STU-')) {
+      studentCode = existing.studentCode;
+    } else if (!studentCode || studentCode.startsWith('STU-') || !studentCode.toUpperCase().startsWith(expectedPrefix)) {
+      studentCode = await this.getNextStudentId(data.course);
+    }
 
     const parseDate = (d) => {
       if (!d) return null;
@@ -178,6 +219,7 @@ export class StudentService {
       mobile: data.mobile.trim(),
       email: data.email ? data.email.trim() : null,
       course: data.course.trim(),
+      year: data.year ? data.year.trim() : null,
       batch: data.batch.trim(),
       admissionDate: parseDate(data.admissionDate) || new Date(),
       instalmentDate: parseDate(data.instalmentDate),

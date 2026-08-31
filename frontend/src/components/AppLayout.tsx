@@ -7,6 +7,7 @@ import {
   History,
   ReceiptText,
   BellRing,
+  Wallet,
   Settings as SettingsIcon,
   LogOut,
   Menu,
@@ -23,6 +24,7 @@ const nav = [
   { to: "/payment-history", label: "Payment History", icon: History },
   { to: "/receipts", label: "Receipts", icon: ReceiptText },
   { to: "/reminders", label: "Reminders", icon: BellRing },
+  { to: "/institute-expenses", label: "Institute Expenses", icon: Wallet },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 

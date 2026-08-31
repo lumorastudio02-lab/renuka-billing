@@ -36,6 +36,7 @@ const blank = (id: string): Student => ({
   mobile: "",
   email: "",
   course: "",
+  year: "",
   batch: "",
   admissionDate: todayISO(),
   instalmentDate: "",
@@ -52,13 +53,22 @@ function StudentsPage() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [viewing, setViewing] = useState<Student | null>(null);
 
+  const availableBatches = useMemo(() => {
+    const set = new Set<string>(BATCH_OPTIONS);
+    students.forEach((s) => {
+      if (s.batch) set.add(s.batch);
+    });
+    return Array.from(set);
+  }, [students]);
+
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
 
     return [...students]
       .filter((s) => {
         const matchesSearch = !t ||
-          [s.name, s.id, s.mobile, s.course, s.batch]
+          [s.name, s.id, s.mobile, s.course, s.year, s.batch]
+            .filter(Boolean)
             .join(" ")
             .toLowerCase()
             .includes(t);
@@ -103,7 +113,7 @@ function StudentsPage() {
           <Field label="Batch">
             <Select value={batchFilter} onChange={(e) => setBatchFilter(e.target.value)}>
               <option value="">All Batches</option>
-              {BATCH_OPTIONS.map((batch) => <option key={batch} value={batch}>{batch}</option>)}
+              {availableBatches.map((batch) => <option key={batch} value={batch}>{batch}</option>)}
             </Select>
           </Field>
           <div className="flex flex-wrap gap-2">
@@ -133,7 +143,7 @@ function StudentsPage() {
             >
               <Download className="h-4 w-4" /> Download All ({students.length})
             </Btn>
-            <Btn onClick={() => setEditing(blank(nextStudentId(students)))}><Plus className="h-4 w-4" /> Add Student</Btn>
+            <Btn onClick={() => setEditing({ ...blank(nextStudentId(students, courseFilter)), course: courseFilter })}><Plus className="h-4 w-4" /> Add Student</Btn>
           </div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">Showing {filtered.length} of {students.length} students · grouped by course and batch</p>
@@ -143,7 +153,7 @@ function StudentsPage() {
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              {["ID", "Student", "Course / Batch", "Total Fee", "Paid", "Remaining", "Next Due", "Status", ""].map((h) => (
+              {["ID", "Student", "Course / Year / Batch", "Total Fee", "Paid", "Remaining", "Next Due", "Status", ""].map((h) => (
                 <th key={h} className="px-4 py-3 font-medium">{h}</th>
               ))}
             </tr>
@@ -169,7 +179,7 @@ function StudentsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-foreground">{s.course}</p>
-                          <p className="text-xs text-muted-foreground">{s.batch}</p>
+                          <p className="text-xs text-muted-foreground">{s.year ? `${s.year} · ` : ""}{s.batch}</p>
                         </td>
                         <td className="px-4 py-3">{formatINR(s.totalFee)}</td>
                         <td className="px-4 py-3 text-[oklch(0.45_0.13_155)]">{formatINR(s.paidFee)}</td>
@@ -207,6 +217,7 @@ function StudentsPage() {
               ["Mobile", viewing.mobile],
               ["Email", viewing.email || "—"],
               ["Course", viewing.course],
+              ["Year", viewing.year || "—"],
               ["Batch", viewing.batch],
               ["Admission Date", formatDate(viewing.admissionDate)],
               ["Instalment Date", formatDate(viewing.instalmentDate)],
@@ -229,15 +240,35 @@ function StudentsPage() {
 }
 
 function StudentForm({ student, onClose }: { student: Student; onClose: () => void }) {
+  const { students } = useAppData();
+  const isNewStudent = !student.name;
   const [f, setF] = useState<Student>(student);
   const set = (k: keyof Student, v: string | number) => setF((p) => ({ ...p, [k]: v }));
+
+  const handleCourseChange = (selectedCourse: string) => {
+    setF((prev) => {
+      const updated = { ...prev, course: selectedCourse };
+      if (isNewStudent) {
+        updated.id = nextStudentId(students, selectedCourse);
+      }
+      return updated;
+    });
+  };
+
+  const isStandardBatch = (b: string) => BATCH_OPTIONS.includes(b);
+  const [selectedBatch, setSelectedBatch] = useState<string>(() => {
+    if (!student.batch) return "";
+    return isStandardBatch(student.batch) ? student.batch : "Other";
+  });
+  const [customBatch, setCustomBatch] = useState<string>(() => {
+    if (!student.batch) return "";
+    return isStandardBatch(student.batch) ? "" : student.batch;
+  });
+
   const remaining = Math.max(0, (Number(f.totalFee) || 0) - (Number(f.paidFee) || 0));
   const courseOptions = f.course && !COURSE_OPTIONS.includes(f.course as (typeof COURSE_OPTIONS)[number])
     ? [f.course, ...COURSE_OPTIONS]
     : COURSE_OPTIONS;
-  const batchOptions = f.batch && !BATCH_OPTIONS.includes(f.batch)
-    ? [f.batch, ...BATCH_OPTIONS]
-    : BATCH_OPTIONS;
 
   return (
     <Modal title={student.name ? "Edit Student" : "Add Student"} onClose={onClose}>
@@ -254,21 +285,78 @@ function StudentForm({ student, onClose }: { student: Student; onClose: () => vo
           <Field label="Mobile Number"><Input required pattern="[0-9+ ]{10,15}" value={f.mobile} onChange={(e) => set("mobile", e.target.value)} /></Field>
           <Field label="Email (optional)"><Input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} /></Field>
           <Field label="Course">
-            <Select required value={f.course} onChange={(e) => set("course", e.target.value)}>
+            <Select required value={f.course} onChange={(e) => handleCourseChange(e.target.value)}>
               <option value="" disabled>Select Course</option>
               {courseOptions.map((course) => <option key={course} value={course}>{course}</option>)}
             </Select>
           </Field>
+          <Field label="Year">
+            <Input
+              placeholder="e.g. 1st - 2026"
+              value={f.year || ""}
+              onChange={(e) => set("year", e.target.value)}
+            />
+          </Field>
           <Field label="Batch">
-            <Select required value={f.batch} onChange={(e) => set("batch", e.target.value)}>
+            <Select
+              required
+              value={selectedBatch}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedBatch(val);
+                if (val === "Other") {
+                  set("batch", customBatch);
+                } else {
+                  set("batch", val);
+                }
+              }}
+            >
               <option value="" disabled>Select Batch</option>
-              {batchOptions.map((batch) => <option key={batch} value={batch}>{batch}</option>)}
+              {BATCH_OPTIONS.map((batch) => <option key={batch} value={batch}>{batch}</option>)}
+              <option value="Other">Other</option>
             </Select>
+            {selectedBatch === "Other" && (
+              <Input
+                className="mt-2"
+                placeholder="Enter custom batch (e.g. Batch 5)"
+                required
+                value={customBatch}
+                onChange={(e) => {
+                  setCustomBatch(e.target.value);
+                  set("batch", e.target.value);
+                }}
+              />
+            )}
           </Field>
           <Field label="Admission Date"><Input type="date" required value={f.admissionDate} onChange={(e) => set("admissionDate", e.target.value)} /></Field>
           <Field label="Instalment Date"><Input type="date" value={f.instalmentDate} onChange={(e) => set("instalmentDate", e.target.value)} /></Field>
-          <Field label="Total Course Fee (₹)"><Input type="number" min={0} required value={f.totalFee} onChange={(e) => set("totalFee", Number(e.target.value))} /></Field>
-          <Field label="Total Paid Fee (₹)"><Input type="number" min={0} value={f.paidFee} onChange={(e) => set("paidFee", Number(e.target.value))} /></Field>
+          <Field label="Total Course Fee (₹)">
+            <Input
+              type="number"
+              min={0}
+              required
+              placeholder="0"
+              value={f.totalFee === 0 ? "" : f.totalFee}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/^0+(?=\d)/, "");
+                set("totalFee", raw === "" ? 0 : Number(raw));
+              }}
+            />
+          </Field>
+          <Field label="Total Paid Fee (₹)">
+            <Input
+              type="number"
+              min={0}
+              placeholder="0"
+              value={f.paidFee === 0 ? "" : f.paidFee}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/^0+(?=\d)/, "");
+                set("paidFee", raw === "" ? 0 : Number(raw));
+              }}
+            />
+          </Field>
           <Field label="Next Payment Due Date"><Input type="date" value={f.nextDueDate} onChange={(e) => set("nextDueDate", e.target.value)} /></Field>
           <Field label="Remaining Fee (auto)"><Input disabled value={formatINR(remaining)} /></Field>
         </div>
@@ -281,7 +369,6 @@ function StudentForm({ student, onClose }: { student: Student; onClose: () => vo
   );
 }
 
-
 function downloadStudents(
   students: Student[],
   filters?: { q?: string; course?: string; batch?: string },
@@ -292,6 +379,7 @@ function downloadStudents(
     "Mobile Number",
     "Email",
     "Course",
+    "Year",
     "Batch",
     "Admission Date",
     "Instalment Date",
@@ -308,6 +396,7 @@ function downloadStudents(
     s.mobile,
     s.email,
     s.course,
+    s.year || "",
     s.batch,
     s.admissionDate,
     s.instalmentDate,

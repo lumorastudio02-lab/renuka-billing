@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchAppData, getPayments, getSettings, getStudents } from "./store";
+import { fetchAppData, getExpenses, getPayments, getSettings, getStudents } from "./store";
 
 export function useAppData() {
   const [tick, setTick] = useState(0);
@@ -28,6 +28,7 @@ export function useAppData() {
     tick,
     students: mounted ? getStudents() : [],
     payments: mounted ? getPayments() : [],
+    expenses: mounted ? getExpenses() : [],
     settings: getSettings(),
     refresh,
   };

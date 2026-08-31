@@ -49,73 +49,85 @@ function renderMarathiTextImage(text: string): string {
 export function buildReceiptDoc(student: Student, payment: Payment) {
   const s = getSettings();
   const logo = s.logo || defaultLogoData;
-  const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
-  const W = doc.internal.pageSize.getWidth();
-  let y = 48;
+  const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  const W = doc.internal.pageSize.getWidth(); // 595.28 pt
 
+  let y = 35;
+
+  // 1. Header (Logo + Institute details)
   if (logo) {
     try {
-      doc.addImage(logo, "PNG", 40, y - 10, 56, 56);
+      doc.addImage(logo, "PNG", 32, y - 8, 44, 44);
     } catch {
       /* ignore bad logo */
     }
   }
-  doc.setFont("helvetica", "bold").setFontSize(18);
-  doc.text(s.instituteName, logo ? 108 : 40, y + 8);
-  doc.setFont("helvetica", "normal").setFontSize(10);
-  doc.text(s.address, logo ? 108 : 40, y + 26, { maxWidth: W - 160 });
-  doc.text(`${s.mobile}  |  ${s.email}`, logo ? 108 : 40, y + 42);
+  doc.setFont("helvetica", "bold").setFontSize(14).setTextColor(0, 0, 0);
+  doc.text(s.instituteName, logo ? 84 : 32, y + 8);
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(55, 65, 81);
+  doc.text(s.address, logo ? 84 : 32, y + 22, { maxWidth: W - 120 });
+  doc.text(`${s.mobile}  |  ${s.email}`, logo ? 84 : 32, y + 34);
 
-  y += 66;
-  doc.setDrawColor(30, 58, 95).setLineWidth(1.2).line(40, y, W - 40, y);
-  y += 26;
-  doc.setFont("helvetica", "bold").setFontSize(14);
-  doc.text("FEE RECEIPT", W / 2, y, { align: "center" });
+  // Divider Line
+  y += 48;
+  doc.setDrawColor(30, 58, 95).setLineWidth(1).line(32, y, W - 32, y);
+
+  // 2. Title Banner
   y += 24;
-  doc.setFont("helvetica", "normal").setFontSize(10);
-  doc.text(`Receipt No: ${payment.receiptNo}`, 40, y);
-  doc.text(`Receipt Date: ${formatDate(payment.date)}`, W - 40, y, { align: "right" });
+  doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(0, 0, 0);
+  doc.text("FEE RECEIPT", W / 2, y, { align: "center" });
 
+  // 3. Receipt Subheader (Receipt No & Date)
   y += 22;
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(31, 41, 55);
+  doc.text(`Receipt No: ${payment.receiptNo}`, 32, y);
+  doc.text(`Receipt Date: ${formatDate(payment.date)}`, W - 32, y, { align: "right" });
+
+  // 4. Full Width Key-Value Rows (Single Table with Alternating Shaded Rows)
+  y += 14;
   const rows: [string, string][] = [
     ["Student Name", student.name],
     ["Mobile", student.mobile],
     ["Course", student.course],
-    ["Batch", student.batch],
+    ["Batch", student.batch + (student.year ? ` (${student.year})` : "")],
     ["Total Course Fee", rs(student.totalFee)],
     ["Current Payment", rs(payment.amount)],
     ["Total Paid", rs(student.paidFee)],
     ["Remaining Fee", rs(payment.remainingAfter)],
-    ["Payment Mode", payment.mode],
-    ...(payment.mode === "UPI" ? [["UPI Reference", payment.upiReference || "—"] as [string, string]] : []),
+    ["Payment Mode", payment.mode + (payment.upiReference ? ` (${payment.upiReference})` : "")],
     ["Next Payment Due Date", payment.nextDueDate ? formatDate(payment.nextDueDate) : "Fully Paid"],
   ];
+
   rows.forEach(([k, v], i) => {
     if (i % 2 === 0) {
-      doc.setFillColor(244, 247, 251).rect(40, y - 12, W - 80, 22, "F");
+      doc.setFillColor(244, 247, 251).rect(32, y - 10, W - 64, 20, "F");
     }
-    doc.setFont("helvetica", "normal").text(k, 52, y + 3);
-    doc.setFont("helvetica", "bold").text(String(v), W - 52, y + 3, { align: "right" });
-    y += 22;
+    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(55, 65, 81);
+    doc.text(k, 42, y + 3);
+    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(0, 0, 0);
+    doc.text(String(v), W - 42, y + 3, { align: "right" });
+    y += 20;
   });
 
-  y += 26;
-  doc.setFont("helvetica", "bold").setFontSize(12);
-  doc.text("Thank you!", 40, y);
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(120);
-  doc.text("This is a computer generated receipt.", 40, y + 16);
+  // 5. Footer Section
+  y += 24;
+  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(0, 0, 0);
+  doc.text("Thank you!", 32, y);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(156, 163, 175);
+  doc.text("This is a computer generated receipt.", 32, y + 14);
+
+  doc.text("Authorised Signatory", W - 32, y + 14, { align: "right" });
 
   const marathiImg = renderMarathiTextImage("एकदा भरलेली फी कोणत्याही कारणास्तव परत मिळणार नाही.");
   if (marathiImg) {
     try {
-      doc.addImage(marathiImg, "PNG", W / 2 - 250, y + 18, 500, 30);
+      doc.addImage(marathiImg, "PNG", W / 2 - 180, y + 20, 360, 22);
     } catch {
       /* ignore canvas error */
     }
   }
 
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(120);
-  doc.text("Authorised Signatory", W - 40, y + 16, { align: "right" });
+  // Bottom half of the A4 page remains clean empty space
   return doc;
 }
 

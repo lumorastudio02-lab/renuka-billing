@@ -6,6 +6,7 @@ export const createStudentSchema = z.object({
   mobile: z.string().min(5, 'Mobile number is required'),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   course: z.string().min(1, 'Course is required'),
+  year: z.string().optional().or(z.literal('')),
   batch: z.string().min(1, 'Batch is required'),
   admissionDate: z.string().min(1, 'Admission date is required'),
   instalmentDate: z.string().optional().or(z.literal('')),

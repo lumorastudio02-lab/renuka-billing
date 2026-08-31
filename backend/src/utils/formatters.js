@@ -1,5 +1,6 @@
-export function formatStudentId(nextNumber) {
-  return `STU-${String(nextNumber).padStart(3, '0')}`;
+export function formatStudentId(nextNumber, course) {
+  const prefix = (course && course.trim() ? course.trim().charAt(0) : 'S').toUpperCase();
+  return `${prefix}${String(nextNumber).padStart(3, '0')}`;
 }
 
 export function formatReceiptNo(nextNumber) {

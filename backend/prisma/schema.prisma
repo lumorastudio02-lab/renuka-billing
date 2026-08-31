@@ -75,6 +75,7 @@ model Student {
   mobile         String
   email          String?
   course         String
+  year           String?
   batch          String
   admissionDate  DateTime
   instalmentDate DateTime?

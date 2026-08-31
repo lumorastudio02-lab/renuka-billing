@@ -1,4 +1,6 @@
-export const BATCH_OPTIONS = Array.from(
-  { length: 10 },
-  (_, i) => `Batch ${i + 1}`
-);
+export const BATCH_OPTIONS = [
+  "Batch 1",
+  "Batch 2",
+  "Batch 3",
+  "Batch 4",
+];

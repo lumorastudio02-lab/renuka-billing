@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FeeCollectionRouteImport } from './routes/fee-collection'
+import { Route as InstituteExpensesRouteImport } from './routes/institute-expenses'
 import { Route as PaymentHistoryRouteImport } from './routes/payment-history'
 import { Route as ReceiptsRouteImport } from './routes/receipts'
 import { Route as RemindersRouteImport } from './routes/reminders'
@@ -31,6 +32,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const FeeCollectionRoute = FeeCollectionRouteImport.update({
   id: '/fee-collection',
   path: '/fee-collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstituteExpensesRoute = InstituteExpensesRouteImport.update({
+  id: '/institute-expenses',
+  path: '/institute-expenses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaymentHistoryRoute = PaymentHistoryRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/fee-collection': typeof FeeCollectionRoute
+  '/institute-expenses': typeof InstituteExpensesRoute
   '/payment-history': typeof PaymentHistoryRoute
   '/receipts': typeof ReceiptsRoute
   '/reminders': typeof RemindersRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/fee-collection': typeof FeeCollectionRoute
+  '/institute-expenses': typeof InstituteExpensesRoute
   '/payment-history': typeof PaymentHistoryRoute
   '/receipts': typeof ReceiptsRoute
   '/reminders': typeof RemindersRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/fee-collection': typeof FeeCollectionRoute
+  '/institute-expenses': typeof InstituteExpensesRoute
   '/payment-history': typeof PaymentHistoryRoute
   '/receipts': typeof ReceiptsRoute
   '/reminders': typeof RemindersRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/fee-collection'
+    | '/institute-expenses'
     | '/payment-history'
     | '/receipts'
     | '/reminders'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/fee-collection'
+    | '/institute-expenses'
     | '/payment-history'
     | '/receipts'
     | '/reminders'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/fee-collection'
+    | '/institute-expenses'
     | '/payment-history'
     | '/receipts'
     | '/reminders'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   FeeCollectionRoute: typeof FeeCollectionRoute
+  InstituteExpensesRoute: typeof InstituteExpensesRoute
   PaymentHistoryRoute: typeof PaymentHistoryRoute
   ReceiptsRoute: typeof ReceiptsRoute
   RemindersRoute: typeof RemindersRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/fee-collection'
       fullPath: '/fee-collection'
       preLoaderRoute: typeof FeeCollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/institute-expenses': {
+      id: '/institute-expenses'
+      path: '/institute-expenses'
+      fullPath: '/institute-expenses'
+      preLoaderRoute: typeof InstituteExpensesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payment-history': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   FeeCollectionRoute: FeeCollectionRoute,
+  InstituteExpensesRoute: InstituteExpensesRoute,
   PaymentHistoryRoute: PaymentHistoryRoute,
   ReceiptsRoute: ReceiptsRoute,
   RemindersRoute: RemindersRoute,

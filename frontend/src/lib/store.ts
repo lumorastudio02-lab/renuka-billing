@@ -27,10 +27,12 @@ export const COURSE_OPTIONS = [
   "Hotel Management",
 ] as const;
 
-export const BATCH_OPTIONS = Array.from(
-  { length: 10 },
-  (_, i) => `Batch ${i + 1}`,
-) as string[];
+export const BATCH_OPTIONS = [
+  "Batch 1",
+  "Batch 2",
+  "Batch 3",
+  "Batch 4",
+] as string[];
 
 export type Student = {
   id: string;
@@ -38,6 +40,7 @@ export type Student = {
   mobile: string;
   email: string;
   course: string;
+  year?: string;
   batch: string;
   admissionDate: string;
   instalmentDate: string;
@@ -268,13 +271,24 @@ export function getSettings(): Settings {
   return stateCache.settings;
 }
 
-export function nextStudentId(students: Student[]) {
+export function getCoursePrefix(course?: string): string {
+  if (!course || !course.trim()) return "S";
+  return course.trim().charAt(0).toUpperCase();
+}
+
+export function nextStudentId(students: Student[], course?: string) {
+  const prefix = getCoursePrefix(course);
   const max = students.reduce((m, s) => {
-    const n = parseInt(s.id.replace(/\D/g, ""), 10);
-    return isNaN(n) ? m : Math.max(m, n);
+    const id = (s.id || "").trim().toUpperCase();
+    if (id.startsWith(prefix)) {
+      const numPart = id.slice(prefix.length).replace(/\D/g, "");
+      const n = parseInt(numPart, 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }
+    return m;
   }, 0);
 
-  return "STU-" + String(max + 1).padStart(3, "0");
+  return `${prefix}${String(max + 1).padStart(3, "0")}`;
 }
 
 // -----------------------------------------
