@@ -1,9 +1,72 @@
 import { prisma } from '../config/database.js';
 import { ApiError } from '../utils/api-error.js';
 import { formatStudentId, calculateDueStatus } from '../utils/formatters.js';
+import { PaymentService } from './payment.service.js';
 
 export class StudentService {
+  static async syncMissingInitialPayments() {
+    try {
+      const students = await prisma.student.findMany({
+        where: { OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }] },
+        include: { payments: true },
+      });
+
+      for (const s of students) {
+        await this.syncMissingInitialPaymentsForStudent(s);
+      }
+    } catch (err) {
+      console.error('Error syncing missing initial payments:', err);
+    }
+  }
+
+  static async syncMissingInitialPaymentsForStudent(studentOrId) {
+    try {
+      const student = typeof studentOrId === 'string'
+        ? await prisma.student.findUnique({ where: { id: studentOrId }, include: { payments: true } })
+        : studentOrId;
+
+      if (!student) return;
+
+      const paidFee = Number(student.paidFee) || 0;
+      const existingPaymentsTotal = (student.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+      if (paidFee > existingPaymentsTotal) {
+        const diff = paidFee - existingPaymentsTotal;
+        const nextReceiptNo = await PaymentService.getNextReceiptNo();
+
+        let paymentDate = student.admissionDate && !isNaN(new Date(student.admissionDate).getTime())
+          ? new Date(student.admissionDate)
+          : new Date();
+
+        let nextDueDate = student.nextDueDate && !isNaN(new Date(student.nextDueDate).getTime())
+          ? new Date(student.nextDueDate)
+          : null;
+
+        if (nextDueDate && nextDueDate.getFullYear() < 100) {
+          nextDueDate.setFullYear(2000 + nextDueDate.getFullYear());
+        }
+
+        await prisma.payment.create({
+          data: {
+            receiptNo: nextReceiptNo,
+            studentId: student.id,
+            amount: diff,
+            date: paymentDate,
+            mode: 'Cash',
+            previouslyPaid: existingPaymentsTotal,
+            remainingAfter: Math.max(0, Number(student.totalFee) - paidFee),
+            nextDueDate,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Error syncing initial payment for student:', err);
+    }
+  }
+
   static async getAllStudents({ query, course, batch }) {
+    await this.syncMissingInitialPayments();
+
     const where = {
       OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
       ...(course ? { course } : {}),
@@ -36,6 +99,16 @@ export class StudentService {
       students = [];
     }
 
+    const formatDateStr = (d) => {
+      if (!d) return '';
+      let dateObj = new Date(d);
+      if (isNaN(dateObj.getTime())) return '';
+      if (dateObj.getFullYear() < 100) {
+        dateObj.setFullYear(2000 + dateObj.getFullYear());
+      }
+      return dateObj.toISOString().slice(0, 10);
+    };
+
     return students.map((s) => ({
       id: s.studentCode || s.id,
       internalId: s.id,
@@ -44,11 +117,11 @@ export class StudentService {
       email: s.email || '',
       course: s.course,
       batch: s.batch,
-      admissionDate: s.admissionDate && !isNaN(new Date(s.admissionDate).getTime()) ? new Date(s.admissionDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-      instalmentDate: s.instalmentDate && !isNaN(new Date(s.instalmentDate).getTime()) ? new Date(s.instalmentDate).toISOString().slice(0, 10) : '',
+      admissionDate: formatDateStr(s.admissionDate) || new Date().toISOString().slice(0, 10),
+      instalmentDate: formatDateStr(s.instalmentDate),
       totalFee: Number(s.totalFee) || 0,
       paidFee: Number(s.paidFee) || 0,
-      nextDueDate: s.nextDueDate && !isNaN(new Date(s.nextDueDate).getTime()) ? new Date(s.nextDueDate).toISOString().slice(0, 10) : '',
+      nextDueDate: formatDateStr(s.nextDueDate),
       status: calculateDueStatus(s),
     }));
   }
@@ -87,8 +160,16 @@ export class StudentService {
 
     const parseDate = (d) => {
       if (!d) return null;
-      const parsed = new Date(d);
-      return isNaN(parsed.getTime()) ? null : parsed;
+      let dateStr = String(d);
+      if (dateStr.startsWith('00')) {
+        dateStr = '20' + dateStr.slice(2);
+      }
+      const parsed = new Date(dateStr);
+      if (isNaN(parsed.getTime())) return null;
+      if (parsed.getFullYear() < 100) {
+        parsed.setFullYear(2000 + parsed.getFullYear());
+      }
+      return parsed;
     };
 
     const studentData = {
@@ -105,18 +186,21 @@ export class StudentService {
       nextDueDate: parseDate(data.nextDueDate),
     };
 
+    let targetStudent;
     if (existing) {
-      const updated = await prisma.student.update({
+      targetStudent = await prisma.student.update({
         where: { id: existing.id },
         data: studentData,
       });
-      return { ...updated, id: updated.studentCode };
+    } else {
+      targetStudent = await prisma.student.create({
+        data: studentData,
+      });
     }
 
-    const created = await prisma.student.create({
-      data: studentData,
-    });
-    return { ...created, id: created.studentCode };
+    await this.syncMissingInitialPaymentsForStudent(targetStudent.id);
+
+    return { ...targetStudent, id: targetStudent.studentCode };
   }
 
   static async deleteStudent(studentIdOrCode) {
@@ -138,3 +222,4 @@ export class StudentService {
     return true;
   }
 }
+

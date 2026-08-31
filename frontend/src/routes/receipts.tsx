@@ -28,7 +28,7 @@ function Receipts() {
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
     return payments
-      .map((p) => ({ p, s: students.find((x) => x.id === p.studentId) }))
+      .map((p) => ({ p, s: students.find((x) => x.id === p.studentId || (x as any).internalId === p.studentId) }))
       .filter((r) => r.s && (!t || `${r.s!.name} ${r.p.receiptNo}`.toLowerCase().includes(t)))
       .sort((a, b) => (a.p.date < b.p.date ? 1 : -1));
   }, [payments, students, q]);

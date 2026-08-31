@@ -290,6 +290,34 @@ export function saveStudent(student: Student): void {
   } else {
     stateCache.students.push(student);
   }
+
+  if (student.paidFee > 0) {
+    const studentPayments = stateCache.payments.filter(
+      (p) => p.studentId === student.id || (student as any).internalId === p.studentId
+    );
+    const sumPaid = studentPayments.reduce((acc, p) => acc + p.amount, 0);
+
+    if (student.paidFee > sumPaid) {
+      const diff = student.paidFee - sumPaid;
+      const maxReceipt = stateCache.payments.reduce((max, p) => {
+        const n = parseInt(p.receiptNo.replace(/\D/g, ""), 10);
+        return Number.isNaN(n) ? max : Math.max(max, n);
+      }, 1000);
+
+      stateCache.payments.unshift({
+        id: "P" + Date.now(),
+        receiptNo: "RCP-" + String(maxReceipt + 1),
+        studentId: student.id,
+        amount: diff,
+        date: student.admissionDate || todayISO(),
+        mode: "Cash",
+        nextDueDate: student.nextDueDate || "",
+        previouslyPaid: sumPaid,
+        remainingAfter: Math.max(0, student.totalFee - student.paidFee),
+      });
+    }
+  }
+
   notify();
 
   fetchWithAuth(`${API_BASE}/students`, {

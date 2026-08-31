@@ -13,7 +13,7 @@ function PaymentHistory() {
   const { payments, students } = useAppData();
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Payment | null>(null);
-  const rows = useMemo(() => { const t=q.trim().toLowerCase(); return payments.map(p=>({p,s:students.find(x=>x.id===p.studentId)})).filter(({s})=>!!s).filter(({s,p})=>!t||`${s!.name} ${p.receiptNo}`.toLowerCase().includes(t)).sort((a,b)=>a.p.date<b.p.date?1:-1); }, [payments,students,q]);
+  const rows = useMemo(() => { const t=q.trim().toLowerCase(); return payments.map(p=>({p,s:students.find(x=>x.id===p.studentId||(x as any).internalId===p.studentId)})).filter(({s})=>!!s).filter(({s,p})=>!t||`${s!.name} ${p.receiptNo}`.toLowerCase().includes(t)).sort((a,b)=>a.p.date<b.p.date?1:-1); }, [payments,students,q]);
   const total = rows.reduce((a,r)=>a+r.p.amount,0);
   return <AppLayout title="Payment History" subtitle={`${rows.length} payments · ${formatINR(total)} collected`}>
     <Card className="mb-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"/><Input className="pl-9" placeholder="Search by student name..." value={q} onChange={e=>setQ(e.target.value)}/></div><Btn onClick={()=>setEditing({id:"",receiptNo:"",studentId:students[0]?.id||"",amount:0,date:todayISO(),mode:"Cash",nextDueDate:"",remainingAfter:0,previouslyPaid:0})} disabled={students.length===0}><Plus className="h-4 w-4"/> Add Payment</Btn></div></Card>
