@@ -24,11 +24,19 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     if (env.CORS_ORIGIN === '*') return callback(null, true);
 
-    const origins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
-    if (origins.includes(origin) || origin.endsWith('.vercel.app')) {
+    const origins = env.CORS_ORIGIN.split(',').map((o) => o.trim().toLowerCase());
+    const lowerOrigin = origin.trim().toLowerCase();
+
+    const isAllowed =
+      origins.includes(lowerOrigin) ||
+      lowerOrigin.endsWith('.vercel.app') ||
+      lowerOrigin.endsWith('renukaparamedicalbaramati.com') ||
+      lowerOrigin.endsWith('.renukaparamedicalbaramati.com');
+
+    if (isAllowed) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
