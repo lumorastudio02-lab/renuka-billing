@@ -89,6 +89,9 @@ model Student {
 
   @@index([course, batch])
   @@index([nextDueDate])
+  @@index([name])
+  @@index([mobile])
+  @@index([deletedAt])
   @@map("students")
 }
 
@@ -109,6 +112,7 @@ model Payment {
 
   @@index([studentId])
   @@index([date])
+  @@index([createdAt])
   @@map("payments")
 }
 

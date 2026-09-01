@@ -85,16 +85,20 @@ export class PaymentService {
   }
 
   static async getNextReceiptNo() {
-    const payments = await prisma.payment.findMany({
+    const latest = await prisma.payment.findFirst({
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { receiptNo: true },
     });
 
-    const max = payments.reduce((m, p) => {
-      const n = parseInt((p.receiptNo || '').replace(/\D/g, ''), 10);
-      return isNaN(n) ? m : Math.max(m, n);
-    }, 1000);
+    if (latest && latest.receiptNo) {
+      const n = parseInt(latest.receiptNo.replace(/\D/g, ''), 10);
+      if (!isNaN(n)) {
+        return formatReceiptNo(n + 1);
+      }
+    }
 
-    return formatReceiptNo(max + 1);
+    const count = await prisma.payment.count();
+    return formatReceiptNo(1001 + count);
   }
 
   static async addPayment(data) {

@@ -193,25 +193,29 @@ export class StudentService {
 
   static async getNextStudentId(course) {
     const prefix = (course && course.trim() ? course.trim().charAt(0) : 'S').toUpperCase();
-    const students = await prisma.student.findMany({
+    const latest = await prisma.student.findFirst({
       where: {
         studentCode: { startsWith: prefix },
       },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { studentCode: true },
     });
 
-    const max = students.reduce((m, s) => {
-      if (!s.studentCode) return m;
-      const code = s.studentCode.trim().toUpperCase();
+    if (latest && latest.studentCode) {
+      const code = latest.studentCode.trim().toUpperCase();
       if (code.startsWith(prefix)) {
         const numPart = code.slice(prefix.length).replace(/\D/g, '');
         const n = parseInt(numPart, 10);
-        return isNaN(n) ? m : Math.max(m, n);
+        if (!isNaN(n)) {
+          return formatStudentId(n + 1, course);
+        }
       }
-      return m;
-    }, 0);
+    }
 
-    return formatStudentId(max + 1, course);
+    const count = await prisma.student.count({
+      where: { studentCode: { startsWith: prefix } },
+    });
+    return formatStudentId(count + 1, course);
   }
 
   static async saveStudent(data) {

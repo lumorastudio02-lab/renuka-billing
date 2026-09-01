@@ -210,36 +210,16 @@ function saveCacheToSession() {
 }
 
 export async function ensureAuthenticated(): Promise<string | null> {
-  try {
-    const username = import.meta.env["VITE_DEFAULT_ADMIN_USERNAME"];
-    const password = import.meta.env["VITE_DEFAULT_ADMIN_PASSWORD"];
-    if (!username || !password) return null;
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (data.data?.tokens?.accessToken) {
-      const token = data.data.tokens.accessToken;
-      stateCache.authToken = token;
-      if (isBrowser()) {
-        localStorage.setItem("ifms_token", token);
-        localStorage.setItem("ifms_auth", "1");
-      }
-      return token;
-    }
-  } catch (e) {
-    console.error("Failed auto authentication:", e);
+  const token = stateCache.authToken || (isBrowser() ? localStorage.getItem("ifms_token") : null);
+  if (token) {
+    stateCache.authToken = token;
+    return token;
   }
   return null;
 }
 
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  let token = stateCache.authToken || (isBrowser() ? localStorage.getItem("ifms_token") : null);
-  if (!token) {
-    token = await ensureAuthenticated();
-  }
+  const token = stateCache.authToken || (isBrowser() ? localStorage.getItem("ifms_token") : null);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -249,13 +229,9 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  let res = await fetch(url, { ...options, headers }).catch(() => null);
+  const res = await fetch(url, { ...options, headers }).catch(() => null);
   if (res && res.status === 401) {
-    token = await ensureAuthenticated();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-      res = await fetch(url, { ...options, headers }).catch(() => null);
-    }
+    logout();
   }
   return res || new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
 }

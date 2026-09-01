@@ -26,12 +26,13 @@ const corsOptions = {
 
     const origins = env.CORS_ORIGIN.split(',').map((o) => o.trim().toLowerCase());
     const lowerOrigin = origin.trim().toLowerCase();
+    const host = lowerOrigin.replace(/^https?:\/\//, '').split(':')[0];
 
     const isAllowed =
       origins.includes(lowerOrigin) ||
-      lowerOrigin.endsWith('.vercel.app') ||
-      lowerOrigin.endsWith('renukaparamedicalbaramati.com') ||
-      lowerOrigin.endsWith('.renukaparamedicalbaramati.com');
+      host.endsWith('.vercel.app') ||
+      host === 'renukaparamedicalbaramati.com' ||
+      host.endsWith('.renukaparamedicalbaramati.com');
 
     if (isAllowed) {
       return callback(null, true);

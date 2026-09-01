@@ -38,3 +38,10 @@ export const env = parsed.data || {
   UPLOAD_PATH: 'uploads/',
   MAX_FILE_SIZE_MB: 5,
 };
+
+if (env.NODE_ENV === 'production') {
+  if (env.JWT_SECRET.includes('super_secret_enterprise_jwt_key')) {
+    console.warn('⚠️ SECURITY WARNING: Production environment is using default JWT_SECRET. Please set a secure JWT_SECRET in environment variables.');
+  }
+}
+
