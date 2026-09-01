@@ -148,26 +148,75 @@ purgeLocalStorage();
 // -----------------------------------------
 // In-Memory API Cache
 // -----------------------------------------
+// Fast Persistent Cache Helper
+// -----------------------------------------
+function loadInitialCache() {
+  if (!isBrowser()) return { students: [], payments: [], expenses: [], settings: defaultSettings, loaded: false };
+  try {
+    const cached = sessionStorage.getItem("ifms_fast_cache");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      return {
+        students: Array.isArray(parsed.students) ? parsed.students : [],
+        payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+        expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+        settings: parsed.settings ? { ...defaultSettings, ...parsed.settings } : defaultSettings,
+        loaded: true,
+      };
+    }
+  } catch {
+    // Ignore cache load error
+  }
+  return { students: [], payments: [], expenses: [], settings: defaultSettings, loaded: false };
+}
+
+const initialCache = loadInitialCache();
+
 let stateCache: {
   students: Student[];
   payments: Payment[];
   expenses: Expense[];
   settings: Settings;
   authToken: string | null;
+  loading: boolean;
+  initialLoaded: boolean;
 } = {
-  students: [],
-  payments: [],
-  expenses: [],
-  settings: defaultSettings,
+  students: initialCache.students,
+  payments: initialCache.payments,
+  expenses: initialCache.expenses,
+  settings: initialCache.settings,
   authToken: isBrowser() ? localStorage.getItem("ifms_token") : null,
+  loading: !initialCache.loaded,
+  initialLoaded: initialCache.loaded,
 };
+
+let activeFetchPromise: Promise<void> | null = null;
+
+function saveCacheToSession() {
+  if (!isBrowser()) return;
+  try {
+    sessionStorage.setItem(
+      "ifms_fast_cache",
+      JSON.stringify({
+        students: stateCache.students,
+        payments: stateCache.payments,
+        expenses: stateCache.expenses,
+        settings: stateCache.settings,
+      })
+    );
+  } catch {
+    // Ignore storage quota error
+  }
+}
 
 export async function ensureAuthenticated(): Promise<string | null> {
   try {
+    const defaultUsername = import.meta.env.VITE_DEFAULT_ADMIN_USERNAME || "admin";
+    const defaultPassword = import.meta.env.VITE_DEFAULT_ADMIN_PASSWORD || "Renuka@2143";
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "admin", password: "Renuka@2143" }),
+      body: JSON.stringify({ username: defaultUsername, password: defaultPassword }),
     });
     const data = await res.json();
     if (data.data?.tokens?.accessToken) {
@@ -216,40 +265,64 @@ function notify() {
 }
 
 export async function fetchAppData(): Promise<void> {
-  try {
-    const [stRes, payRes, expRes, setRes] = await Promise.all([
-      fetchWithAuth(`${API_BASE}/students`),
-      fetchWithAuth(`${API_BASE}/payments`),
-      fetchWithAuth(`${API_BASE}/expenses`),
-      fetchWithAuth(`${API_BASE}/settings`),
-    ]);
-
-    if (stRes && stRes.ok) {
-      const data = await stRes.json();
-      if (Array.isArray(data.data)) stateCache.students = data.data;
-    }
-
-    if (payRes && payRes.ok) {
-      const data = await payRes.json();
-      if (Array.isArray(data.data)) stateCache.payments = data.data;
-    }
-
-    if (expRes && expRes.ok) {
-      const data = await expRes.json();
-      if (Array.isArray(data.data)) stateCache.expenses = data.data;
-    }
-
-    if (setRes && setRes.ok) {
-      const data = await setRes.json();
-      if (data.data) {
-        stateCache.settings = { ...defaultSettings, ...data.data };
-      }
-    }
-
-    notify();
-  } catch (error) {
-    console.error("Failed to sync with MongoDB Atlas API:", error);
+  if (activeFetchPromise) {
+    return activeFetchPromise;
   }
+
+  stateCache.loading = true;
+  notify();
+
+  activeFetchPromise = (async () => {
+    try {
+      const [stRes, payRes, expRes, setRes] = await Promise.all([
+        fetchWithAuth(`${API_BASE}/students`),
+        fetchWithAuth(`${API_BASE}/payments`),
+        fetchWithAuth(`${API_BASE}/expenses`),
+        fetchWithAuth(`${API_BASE}/settings`),
+      ]);
+
+      if (stRes && stRes.ok) {
+        const data = await stRes.json();
+        if (Array.isArray(data.data)) stateCache.students = data.data;
+      }
+
+      if (payRes && payRes.ok) {
+        const data = await payRes.json();
+        if (Array.isArray(data.data)) stateCache.payments = data.data;
+      }
+
+      if (expRes && expRes.ok) {
+        const data = await expRes.json();
+        if (Array.isArray(data.data)) stateCache.expenses = data.data;
+      }
+
+      if (setRes && setRes.ok) {
+        const data = await setRes.json();
+        if (data.data) {
+          stateCache.settings = { ...defaultSettings, ...data.data };
+        }
+      }
+
+      stateCache.initialLoaded = true;
+      saveCacheToSession();
+    } catch (error) {
+      console.error("Failed to sync with MongoDB Atlas API:", error);
+    } finally {
+      stateCache.loading = false;
+      activeFetchPromise = null;
+      notify();
+    }
+  })();
+
+  return activeFetchPromise;
+}
+
+export function isAppDataLoading(): boolean {
+  return stateCache.loading;
+}
+
+export function isAppDataLoaded(): boolean {
+  return stateCache.initialLoaded;
 }
 
 // -----------------------------------------

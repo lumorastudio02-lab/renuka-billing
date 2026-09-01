@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, CalendarClock, CalendarDays, IndianRupee, Pencil, Plus, Trash2, Users, Wallet } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { Btn, Card, Field, Input, Modal, Select, StatCard, StatusBadge } from "@/components/ui-kit";
+import { Btn, Card, Field, Input, Modal, Select, StatCard, StatCardSkeleton, StatusBadge, TableSkeleton } from "@/components/ui-kit";
 import { useAppData } from "@/lib/useAppData";
 import { deleteExpense, dueStatus, formatDate, formatINR, getExpenses, remainingOf, saveExpense, type Expense, type Student } from "@/lib/store";
 
@@ -49,7 +49,7 @@ function ReminderList({ title, students, tone }: { title: string; students: Stud
 }
 
 function Dashboard() {
-  const { students, refresh } = useAppData();
+  const { loading, initialLoaded, students, refresh } = useAppData();
   const expenses = getExpenses();
   const [expenseForm, setExpenseForm] = useState<Expense | null>(null);
 
@@ -64,16 +64,32 @@ function Dashboard() {
   const overdue = by("Overdue");
   const upcoming = by("Upcoming");
 
+  const showSkeleton = loading && !initialLoaded;
+
   return (
     <AppLayout title="Dashboard" subtitle="Overview of fees, collections and reminders">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Total Students" value={students.length} icon={<Users className="h-5 w-5" />} />
-        <StatCard label="Total Fees" value={formatINR(totalFees)} icon={<IndianRupee className="h-5 w-5" />} />
-        <StatCard label="Total Paid" value={formatINR(totalPaid)} icon={<Wallet className="h-5 w-5" />} />
-        <StatCard label="Total Remaining" value={formatINR(totalRemaining)} icon={<AlertTriangle className="h-5 w-5" />} />
-        <StatCard label="Payments Due Today" value={dueToday.length} icon={<CalendarDays className="h-5 w-5" />} />
-        <StatCard label="Upcoming Payments" value={upcoming.length + dueTomorrow.length} icon={<CalendarClock className="h-5 w-5" />} />
-        <StatCard label="Institute Expenses" value={formatINR(totalExpenses)} icon={<Wallet className="h-5 w-5" />} />
+        {showSkeleton ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard label="Total Students" value={students.length} icon={<Users className="h-5 w-5" />} />
+            <StatCard label="Total Fees" value={formatINR(totalFees)} icon={<IndianRupee className="h-5 w-5" />} />
+            <StatCard label="Total Paid" value={formatINR(totalPaid)} icon={<Wallet className="h-5 w-5" />} />
+            <StatCard label="Total Remaining" value={formatINR(totalRemaining)} icon={<AlertTriangle className="h-5 w-5" />} />
+            <StatCard label="Payments Due Today" value={dueToday.length} icon={<CalendarDays className="h-5 w-5" />} />
+            <StatCard label="Upcoming Payments" value={upcoming.length + dueTomorrow.length} icon={<CalendarClock className="h-5 w-5" />} />
+            <StatCard label="Institute Expenses" value={formatINR(totalExpenses)} icon={<Wallet className="h-5 w-5" />} />
+          </>
+        )}
       </div>
 
       {dueToday.length > 0 && (

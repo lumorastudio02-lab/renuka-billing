@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchAppData, getExpenses, getPayments, getSettings, getStudents } from "./store";
+import { fetchAppData, getExpenses, getPayments, getSettings, getStudents, isAppDataLoading, isAppDataLoaded } from "./store";
 
 export function useAppData() {
   const [tick, setTick] = useState(0);
@@ -23,12 +23,17 @@ export function useAppData() {
     setTick((t) => t + 1);
   };
 
+  const loading = isAppDataLoading();
+  const initialLoaded = isAppDataLoaded();
+
   return {
     mounted,
     tick,
-    students: mounted ? getStudents() : [],
-    payments: mounted ? getPayments() : [],
-    expenses: mounted ? getExpenses() : [],
+    loading,
+    initialLoaded,
+    students: getStudents(),
+    payments: getPayments(),
+    expenses: getExpenses(),
     settings: getSettings(),
     refresh,
   };

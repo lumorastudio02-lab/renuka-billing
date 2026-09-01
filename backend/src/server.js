@@ -2,6 +2,7 @@ import app from './app.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { checkDatabaseConnection, prisma } from './config/database.js';
+import { StudentService } from './services/student.service.js';
 
 const PORT = env.PORT || 5000;
 
@@ -12,8 +13,12 @@ async function startServer() {
     logger.info(`API Base URL: http://localhost:${PORT}/api/v1`);
   });
 
-  // Verify DB connection in background without blocking server startup
-  checkDatabaseConnection();
+  // Verify DB connection and sync initial payments in background without blocking server startup
+  checkDatabaseConnection().then(() => {
+    StudentService.syncMissingInitialPayments().catch((err) => {
+      logger.warn('Background initial payments sync notice:', err);
+    });
+  });
 
   const gracefulShutdown = async (signal) => {
     logger.info(`Received ${signal}. Shutting down HTTP server gracefully...`);

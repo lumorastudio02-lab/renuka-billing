@@ -38,17 +38,20 @@ async function main() {
   }
 
   // Create Default Admin User
+  const defaultAdminUsername = process.env.DEFAULT_ADMIN_USERNAME || 'admin';
+  const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'Renuka@2143';
+
   const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash('Renuka@2143', salt);
+  const passwordHash = await bcrypt.hash(defaultAdminPassword, salt);
 
   let adminUser = await prisma.user.findUnique({
-    where: { username: 'admin' },
+    where: { username: defaultAdminUsername },
   });
 
   if (!adminUser) {
     adminUser = await prisma.user.create({
       data: {
-        username: 'admin',
+        username: defaultAdminUsername,
         email: 'admin@renukaparamedical.com',
         passwordHash,
         roleId: adminRole.id,
@@ -56,12 +59,12 @@ async function main() {
     });
   } else {
     adminUser = await prisma.user.update({
-      where: { username: 'admin' },
+      where: { username: defaultAdminUsername },
       data: { passwordHash },
     });
   }
 
-  console.log(`Default Admin User created: ${adminUser.username} (password: Renuka@2143)`);
+  console.log(`Default Admin User created: ${adminUser.username}`);
 
   // Create Default Institute Settings
   const existingSettings = await prisma.instituteSetting.findFirst();

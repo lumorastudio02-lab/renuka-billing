@@ -110,3 +110,34 @@ export function EmptyRow({ text = "No records found", cols = 6 }: { text?: strin
     </tr>
   );
 }
+
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-secondary/80 ${className}`} />;
+}
+
+export function StatCardSkeleton() {
+  return (
+    <Card className="flex items-center justify-between gap-3">
+      <div className="w-full space-y-2">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-7 w-32" />
+      </div>
+      <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+    </Card>
+  );
+}
+
+export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
+  return (
+    <div className="w-full space-y-3 py-3">
+      {Array.from({ length: rows }).map((_, r) => (
+        <div key={r} className="flex items-center gap-4 py-2 border-b border-border/50">
+          {Array.from({ length: cols }).map((_, c) => (
+            <Skeleton key={c} className="h-5 flex-1" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+

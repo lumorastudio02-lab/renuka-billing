@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Download, Printer, Search } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { Btn, Card, Input } from "@/components/ui-kit";
+import { Btn, Card, Input, Skeleton, TableSkeleton } from "@/components/ui-kit";
 import { useAppData } from "@/lib/useAppData";
 import { formatDate, formatINR } from "@/lib/store";
 import { downloadReceipt, printReceipt } from "@/lib/receipt";
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/receipts")({
 });
 
 function Receipts() {
-  const { payments, students, settings } = useAppData();
+  const { loading, initialLoaded, payments, students, settings } = useAppData();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -34,6 +34,7 @@ function Receipts() {
   }, [payments, students, q]);
 
   const active = rows.find((r) => r.p.id === selected) ?? rows[0];
+  const showSkeleton = loading && !initialLoaded;
 
   return (
     <AppLayout title="Receipts" subtitle="Preview, print and download fee receipts">
@@ -46,8 +47,17 @@ function Receipts() {
             </div>
           </div>
           <ul className="max-h-[560px] overflow-y-auto">
-            {rows.length === 0 && <li className="p-5 text-sm text-muted-foreground">No receipts yet.</li>}
-            {rows.map(({ p, s }) => (
+            {showSkeleton ? (
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : (
+              <>
+                {rows.length === 0 && <li className="p-5 text-sm text-muted-foreground">No receipts yet.</li>}
+                {rows.map(({ p, s }) => (
               <li key={p.id}>
                 <button
                   onClick={() => setSelected(p.id)}
@@ -63,6 +73,8 @@ function Receipts() {
                 </button>
               </li>
             ))}
+              </>
+            )}
           </ul>
         </Card>
 

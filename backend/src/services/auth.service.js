@@ -2,12 +2,13 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/database.js';
 import { ApiError } from '../utils/api-error.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { env } from '../config/env.js';
 
 export class AuthService {
   static async login(username, password) {
     const cleanUsername = username.trim().toLowerCase();
     
-    // Support default hardcoded admin user for backwards compatibility fallback if db not seeded
+    // Support default admin user for backwards compatibility fallback if db not seeded
     let user = null;
     try {
       user = await prisma.user.findFirst({
@@ -24,12 +25,15 @@ export class AuthService {
       user = null;
     }
 
+    const defaultAdminUser = env.DEFAULT_ADMIN_USERNAME.trim().toLowerCase();
+    const defaultAdminPass = env.DEFAULT_ADMIN_PASSWORD;
+
     if (!user) {
-      if (cleanUsername === 'admin' && password === 'Renuka@2143') {
-        const accessToken = generateAccessToken({ id: 'admin-legacy-id', username: 'admin', role: 'ADMIN' });
+      if (cleanUsername === defaultAdminUser && password === defaultAdminPass) {
+        const accessToken = generateAccessToken({ id: 'admin-legacy-id', username: env.DEFAULT_ADMIN_USERNAME, role: 'ADMIN' });
         const refreshToken = generateRefreshToken({ id: 'admin-legacy-id' });
         return {
-          user: { id: 'admin-legacy-id', username: 'admin', role: 'ADMIN' },
+          user: { id: 'admin-legacy-id', username: env.DEFAULT_ADMIN_USERNAME, role: 'ADMIN' },
           tokens: { accessToken, refreshToken },
         };
       }
@@ -37,7 +41,7 @@ export class AuthService {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch && cleanUsername === 'admin' && password === 'Renuka@2143') {
+    if (!isMatch && cleanUsername === defaultAdminUser && password === defaultAdminPass) {
       const accessToken = generateAccessToken({ id: user.id, username: user.username, role: user.role?.name || 'ADMIN' });
       const refreshToken = generateRefreshToken({ id: user.id });
       return {

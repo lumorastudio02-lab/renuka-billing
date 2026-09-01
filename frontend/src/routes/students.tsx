@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useMemo, useState } from "react";
 import { Download, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { Btn, Card, EmptyRow, Field, Input, Modal, Select, StatusBadge } from "@/components/ui-kit";
+import { Btn, Card, EmptyRow, Field, Input, Modal, Select, StatusBadge, TableSkeleton } from "@/components/ui-kit";
 import { useAppData } from "@/lib/useAppData";
 import {
   BATCH_OPTIONS,
@@ -46,7 +46,7 @@ const blank = (id: string): Student => ({
 });
 
 function StudentsPage() {
-  const { students } = useAppData();
+  const { loading, initialLoaded, students } = useAppData();
   const [q, setQ] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
@@ -95,6 +95,8 @@ function StudentsPage() {
 
     return groups;
   }, [filtered]);
+
+  const showSkeleton = loading && !initialLoaded;
 
   return (
     <AppLayout title="Students" subtitle={`${students.length} students enrolled`}>
@@ -150,17 +152,20 @@ function StudentsPage() {
       </Card>
 
       <Card className="overflow-x-auto p-0">
-        <table className="w-full min-w-[900px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              {["ID", "Student", "Course / Year / Batch", "Total Fee", "Paid", "Remaining", "Next Due", "Status", ""].map((h) => (
-                <th key={h} className="px-4 py-3 font-medium">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && <EmptyRow cols={9} text="No students found" />}
-            {Array.from(grouped.entries()).map(([course, batches]) => (
+        {showSkeleton ? (
+          <div className="p-4"><TableSkeleton rows={8} cols={9} /></div>
+        ) : (
+          <table className="w-full min-w-[900px] text-sm">
+            <thead>
+              <tr className="border-b border-border bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                {["ID", "Student", "Course / Year / Batch", "Total Fee", "Paid", "Remaining", "Next Due", "Status", ""].map((h) => (
+                  <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && <EmptyRow cols={9} text="No students found" />}
+              {Array.from(grouped.entries()).map(([course, batches]) => (
               <Fragment key={course}>
                 <tr className="border-b border-border bg-primary/5">
                   <td colSpan={9} className="px-4 py-3 font-semibold text-primary">{course}</td>
@@ -205,6 +210,7 @@ function StudentsPage() {
             ))}
           </tbody>
         </table>
+        )}
       </Card>
 
       {editing && <StudentForm student={editing} onClose={() => setEditing(null)} />}

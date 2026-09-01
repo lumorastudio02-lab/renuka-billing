@@ -90,8 +90,6 @@ export class StudentService {
   }
 
   static async getAllStudents({ query, course, batch }) {
-    await this.syncMissingInitialPayments();
-
     const where = {
       OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
       ...(course ? { course } : {}),

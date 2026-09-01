@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import supertest from 'supertest';
 import app from '../src/app.js';
+import { env } from '../src/config/env.js';
 
 let authToken = '';
 
 test('Setup authentication token', async () => {
   const res = await supertest(app)
     .post('/api/v1/auth/login')
-    .send({ username: 'admin', password: 'Renuka@2143' });
+    .send({ username: env.DEFAULT_ADMIN_USERNAME, password: env.DEFAULT_ADMIN_PASSWORD });
   authToken = res.body.data.tokens.accessToken;
 });
 
