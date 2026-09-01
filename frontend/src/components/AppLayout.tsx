@@ -30,7 +30,7 @@ const nav = [
 
 export function AppLayout({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   const navigate = useNavigate();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => isLoggedIn());
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useAppData();

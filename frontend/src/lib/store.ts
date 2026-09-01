@@ -211,8 +211,8 @@ function saveCacheToSession() {
 
 export async function ensureAuthenticated(): Promise<string | null> {
   try {
-    const username = import.meta.env.VITE_DEFAULT_ADMIN_USERNAME;
-    const password = import.meta.env.VITE_DEFAULT_ADMIN_PASSWORD;
+    const username = import.meta.env["VITE_DEFAULT_ADMIN_USERNAME"];
+    const password = import.meta.env["VITE_DEFAULT_ADMIN_PASSWORD"];
     if (!username || !password) return null;
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
@@ -270,8 +270,10 @@ export async function fetchAppData(): Promise<void> {
     return activeFetchPromise;
   }
 
-  stateCache.loading = true;
-  notify();
+  if (!stateCache.initialLoaded) {
+    stateCache.loading = true;
+    notify();
+  }
 
   activeFetchPromise = (async () => {
     try {
@@ -283,24 +285,39 @@ export async function fetchAppData(): Promise<void> {
       ]);
 
       if (stRes && stRes.ok) {
-        const data = await stRes.json();
-        if (Array.isArray(data.data)) stateCache.students = data.data;
+        const resJson = await stRes.json();
+        const items = Array.isArray(resJson.data)
+          ? resJson.data
+          : Array.isArray(resJson.data?.data)
+          ? resJson.data.data
+          : null;
+        if (items) stateCache.students = items;
       }
 
       if (payRes && payRes.ok) {
-        const data = await payRes.json();
-        if (Array.isArray(data.data)) stateCache.payments = data.data;
+        const resJson = await payRes.json();
+        const items = Array.isArray(resJson.data)
+          ? resJson.data
+          : Array.isArray(resJson.data?.data)
+          ? resJson.data.data
+          : null;
+        if (items) stateCache.payments = items;
       }
 
       if (expRes && expRes.ok) {
-        const data = await expRes.json();
-        if (Array.isArray(data.data)) stateCache.expenses = data.data;
+        const resJson = await expRes.json();
+        const items = Array.isArray(resJson.data)
+          ? resJson.data
+          : Array.isArray(resJson.data?.data)
+          ? resJson.data.data
+          : null;
+        if (items) stateCache.expenses = items;
       }
 
       if (setRes && setRes.ok) {
-        const data = await setRes.json();
-        if (data.data) {
-          stateCache.settings = { ...defaultSettings, ...data.data };
+        const resJson = await setRes.json();
+        if (resJson.data) {
+          stateCache.settings = { ...defaultSettings, ...resJson.data };
         }
       }
 
