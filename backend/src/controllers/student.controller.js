@@ -4,9 +4,9 @@ import { ApiResponse } from '../utils/api-response.js';
 export class StudentController {
   static async getAllStudents(req, res, next) {
     try {
-      const { q, course, batch } = req.query;
-      const students = await StudentService.getAllStudents({ query: q, course, batch });
-      return ApiResponse.success(res, 'Students fetched successfully', students);
+      const { q, course, batch, page, limit } = req.query;
+      const result = await StudentService.getAllStudents({ query: q, course, batch, page, limit });
+      return ApiResponse.success(res, 'Students fetched successfully', result);
     } catch (error) {
       next(error);
     }

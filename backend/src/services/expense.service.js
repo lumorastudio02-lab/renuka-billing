@@ -2,12 +2,49 @@ import { prisma } from '../config/database.js';
 import { ApiError } from '../utils/api-error.js';
 
 export class ExpenseService {
-  static async getAllExpenses() {
-    const expenses = await prisma.expense.findMany({
-      orderBy: { date: 'desc' },
-    });
+  static async getAllExpenses({ query = '', category = '', page, limit } = {}) {
+    const cleanQuery = typeof query === 'string' ? query.trim() : '';
+    const where = {
+      ...(category ? { category } : {}),
+    };
 
-    return expenses.map((e) => ({
+    if (cleanQuery) {
+      where.OR = [
+        { title: { contains: cleanQuery, mode: 'insensitive' } },
+        { note: { contains: cleanQuery, mode: 'insensitive' } },
+      ];
+    }
+
+    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : null;
+    const limitNum = limit ? Math.max(1, parseInt(limit, 10) || 50) : null;
+    const isPaginated = pageNum !== null || limitNum !== null;
+
+    let expenses = [];
+    let totalCount = 0;
+
+    if (isPaginated) {
+      const p = pageNum || 1;
+      const l = limitNum || 50;
+      const skip = (p - 1) * l;
+
+      [totalCount, expenses] = await Promise.all([
+        prisma.expense.count({ where }),
+        prisma.expense.findMany({
+          where,
+          orderBy: { date: 'desc' },
+          skip,
+          take: l,
+        }),
+      ]);
+    } else {
+      expenses = await prisma.expense.findMany({
+        where,
+        orderBy: { date: 'desc' },
+      });
+      totalCount = expenses.length;
+    }
+
+    const formatted = expenses.map((e) => ({
       id: e.id,
       title: e.title,
       amount: Number(e.amount),
@@ -15,6 +52,22 @@ export class ExpenseService {
       category: e.category,
       note: e.note || '',
     }));
+
+    if (isPaginated) {
+      const p = pageNum || 1;
+      const l = limitNum || 50;
+      return {
+        data: formatted,
+        pagination: {
+          total: totalCount,
+          page: p,
+          limit: l,
+          totalPages: Math.ceil(totalCount / l),
+        },
+      };
+    }
+
+    return formatted;
   }
 
   static async saveExpense(data) {

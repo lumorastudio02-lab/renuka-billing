@@ -141,3 +141,47 @@ export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: nu
   );
 }
 
+export function PaginationControls({
+  page,
+  totalPages,
+  totalItems,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalItems: number;
+  onPageChange: (newPage: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">
+      <p>
+        Page <span className="font-medium text-foreground">{page}</span> of{" "}
+        <span className="font-medium text-foreground">{totalPages}</span> ({totalItems} total records)
+      </p>
+      <div className="flex items-center gap-2">
+        <Btn
+          type="button"
+          variant="outline"
+          className="h-8 px-3 py-1 text-xs"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Previous
+        </Btn>
+        <Btn
+          type="button"
+          variant="outline"
+          className="h-8 px-3 py-1 text-xs"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Next
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+

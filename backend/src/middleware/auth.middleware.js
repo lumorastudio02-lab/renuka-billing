@@ -13,10 +13,6 @@ export function authenticate(req, res, next) {
     }
   }
 
-  if (!authHeader || process.env.NODE_ENV === 'test') {
-    return next(ApiError.unauthorized('Authentication token missing or invalid format'));
-  }
-
-  req.user = { id: 'admin-legacy-id', username: 'admin', role: 'ADMIN' };
-  next();
+  return next(ApiError.unauthorized('Authentication token missing or invalid format'));
 }
+

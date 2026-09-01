@@ -4,8 +4,9 @@ import { ApiResponse } from '../utils/api-response.js';
 export class ExpenseController {
   static async getAllExpenses(req, res, next) {
     try {
-      const expenses = await ExpenseService.getAllExpenses();
-      return ApiResponse.success(res, 'Expenses fetched successfully', expenses);
+      const { q, category, page, limit } = req.query;
+      const result = await ExpenseService.getAllExpenses({ query: q, category, page, limit });
+      return ApiResponse.success(res, 'Expenses fetched successfully', result);
     } catch (error) {
       next(error);
     }

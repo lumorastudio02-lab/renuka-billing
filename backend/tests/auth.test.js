@@ -22,3 +22,20 @@ test('POST /api/v1/auth/login - invalid credentials', async () => {
   assert.equal(res.status, 401);
   assert.equal(res.body.success, false);
 });
+
+test('GET /api/v1/students - reject missing token', async () => {
+  const res = await supertest(app).get('/api/v1/students');
+
+  assert.equal(res.status, 401);
+  assert.equal(res.body.success, false);
+});
+
+test('GET /api/v1/students - reject invalid or forged token', async () => {
+  const res = await supertest(app)
+    .get('/api/v1/students')
+    .set('Authorization', 'Bearer invalid_forged_token_123');
+
+  assert.equal(res.status, 401);
+  assert.equal(res.body.success, false);
+});
+

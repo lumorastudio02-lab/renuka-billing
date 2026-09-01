@@ -4,9 +4,9 @@ import { ApiResponse } from '../utils/api-response.js';
 export class PaymentController {
   static async getAllPayments(req, res, next) {
     try {
-      const { q } = req.query;
-      const payments = await PaymentService.getAllPayments(q);
-      return ApiResponse.success(res, 'Payments fetched successfully', payments);
+      const { q, page, limit } = req.query;
+      const result = await PaymentService.getAllPayments({ query: q, page, limit });
+      return ApiResponse.success(res, 'Payments fetched successfully', result);
     } catch (error) {
       next(error);
     }

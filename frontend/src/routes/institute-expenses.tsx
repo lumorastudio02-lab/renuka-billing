@@ -14,7 +14,7 @@ import {
   Download,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { Btn, Card, EmptyRow, Field, Input, Modal, Select } from "@/components/ui-kit";
+import { Btn, Card, EmptyRow, Field, Input, Modal, PaginationControls, Select } from "@/components/ui-kit";
 import { useAppData } from "@/lib/useAppData";
 import { deleteExpense, formatDate, formatINR, saveExpense, type Expense } from "@/lib/store";
 import { exportExpensesToExcel, exportExpensesToCSV } from "@/lib/excel";
@@ -123,6 +123,17 @@ function InstituteExpensesPage() {
       return matchesSearch && matchesCategory && matchesDate;
     }).sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [expenseList, searchTerm, selectedCategory, dateFilter, currentMonthStr]);
+
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedExpenses = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredExpenses.slice(start, start + pageSize);
+  }, [filteredExpenses, currentPage, pageSize]);
 
   const filteredTotal = useMemo(
     () => filteredExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
@@ -290,10 +301,10 @@ function InstituteExpensesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredExpenses.length === 0 ? (
+                {paginatedExpenses.length === 0 ? (
                   <EmptyRow cols={5} text="No institute expenses found matching criteria." />
                 ) : (
-                  filteredExpenses.map((exp) => (
+                  paginatedExpenses.map((exp) => (
                     <tr
                       key={exp.id}
                       className="border-b border-border transition-colors hover:bg-muted/40 last:border-0"
@@ -345,6 +356,12 @@ function InstituteExpensesPage() {
                 </tfoot>
               )}
             </table>
+            <PaginationControls
+              page={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredExpenses.length}
+              onPageChange={setPage}
+            />
           </div>
         </Card>
       </div>

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useMemo, useState } from "react";
 import { Download, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { Btn, Card, EmptyRow, Field, Input, Modal, Select, StatusBadge, TableSkeleton } from "@/components/ui-kit";
+import { Btn, Card, EmptyRow, Field, Input, Modal, PaginationControls, Select, StatusBadge, TableSkeleton } from "@/components/ui-kit";
 import { useAppData } from "@/lib/useAppData";
 import {
   BATCH_OPTIONS,
@@ -52,6 +52,8 @@ function StudentsPage() {
   const [batchFilter, setBatchFilter] = useState("");
   const [editing, setEditing] = useState<Student | null>(null);
   const [viewing, setViewing] = useState<Student | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const availableBatches = useMemo(() => {
     const set = new Set<string>(BATCH_OPTIONS);
@@ -83,10 +85,18 @@ function StudentsPage() {
       );
   }, [students, q, courseFilter, batchFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
   const grouped = useMemo(() => {
     const groups = new Map<string, Map<string, Student[]>>();
 
-    filtered.forEach((student) => {
+    paginatedStudents.forEach((student) => {
       if (!groups.has(student.course)) groups.set(student.course, new Map());
       const batches = groups.get(student.course)!;
       if (!batches.has(student.batch)) batches.set(student.batch, []);
@@ -94,7 +104,7 @@ function StudentsPage() {
     });
 
     return groups;
-  }, [filtered]);
+  }, [paginatedStudents]);
 
   const showSkeleton = loading && !initialLoaded;
 
@@ -211,6 +221,12 @@ function StudentsPage() {
           </tbody>
         </table>
         )}
+        <PaginationControls
+          page={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          onPageChange={setPage}
+        />
       </Card>
 
       {editing && <StudentForm student={editing} onClose={() => setEditing(null)} />}

@@ -40,15 +40,21 @@ function LoginPage() {
     }
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     setError("");
-
-    if (login(username, password)) {
-      navigate({ to: "/dashboard" });
-    } else {
-      setError("Invalid username or password");
+    setSubmitting(true);
+    try {
+      const success = await login(username, password);
+      if (success) {
+        navigate({ to: "/dashboard" });
+      } else {
+        setError("Invalid username or password");
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -119,8 +125,8 @@ function LoginPage() {
           )}
 
           {/* Login Button */}
-          <Btn type="submit" className="w-full">
-            Login
+          <Btn type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Logging in..." : "Login"}
           </Btn>
         </form>
 

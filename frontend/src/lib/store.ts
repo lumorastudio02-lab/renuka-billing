@@ -211,12 +211,13 @@ function saveCacheToSession() {
 
 export async function ensureAuthenticated(): Promise<string | null> {
   try {
-    const defaultUsername = import.meta.env.VITE_DEFAULT_ADMIN_USERNAME || "admin";
-    const defaultPassword = import.meta.env.VITE_DEFAULT_ADMIN_PASSWORD || "Renuka@2143";
+    const username = import.meta.env.VITE_DEFAULT_ADMIN_USERNAME;
+    const password = import.meta.env.VITE_DEFAULT_ADMIN_PASSWORD;
+    if (!username || !password) return null;
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: defaultUsername, password: defaultPassword }),
+      body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
     if (data.data?.tokens?.accessToken) {
@@ -555,32 +556,27 @@ export function saveSettings(s: Settings): void {
 // -----------------------------------------
 // Authentication Actions
 // -----------------------------------------
-export function login(u: string, p: string): boolean {
-  if (u.trim().toLowerCase() === "admin" && (p === "Renuka@2143" || p === "admin123")) {
-    if (isBrowser()) {
-      localStorage.setItem("ifms_auth", "1");
-    }
-
-    fetch(`${API_BASE}/auth/login`, {
+export async function login(u: string, p: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: u, password: p }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.data?.tokens?.accessToken) {
-          stateCache.authToken = data.data.tokens.accessToken;
-          if (isBrowser()) localStorage.setItem("ifms_token", data.data.tokens.accessToken);
-        }
-        fetchAppData();
-      })
-      .catch(() => {
-        fetchAppData();
-      });
-
-    return true;
+    });
+    const data = await res.json();
+    if (res.ok && data.data?.tokens?.accessToken) {
+      const token = data.data.tokens.accessToken;
+      stateCache.authToken = token;
+      if (isBrowser()) {
+        localStorage.setItem("ifms_token", token);
+        localStorage.setItem("ifms_auth", "1");
+      }
+      await fetchAppData();
+      return true;
+    }
+  } catch (error) {
+    console.error("Login authentication error:", error);
   }
-
   return false;
 }
 

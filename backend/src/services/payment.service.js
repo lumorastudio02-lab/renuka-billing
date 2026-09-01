@@ -4,26 +4,55 @@ import { formatReceiptNo } from '../utils/formatters.js';
 import { NotificationService } from './notification.service.js';
 
 export class PaymentService {
-  static async getAllPayments(query = '') {
-    const cleanQuery = query.trim().toLowerCase();
+  static async getAllPayments({ query = '', page, limit } = {}) {
+    const cleanQuery = typeof query === 'string' ? query.trim() : '';
+
+    const where = {};
+    if (cleanQuery) {
+      where.OR = [
+        { receiptNo: { contains: cleanQuery, mode: 'insensitive' } },
+        { student: { name: { contains: cleanQuery, mode: 'insensitive' } } },
+        { student: { studentCode: { contains: cleanQuery, mode: 'insensitive' } } },
+      ];
+    }
+
+    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : null;
+    const limitNum = limit ? Math.max(1, parseInt(limit, 10) || 50) : null;
+    const isPaginated = pageNum !== null || limitNum !== null;
 
     let payments = [];
+    let totalCount = 0;
+
     try {
-      payments = await prisma.payment.findMany({
-        include: { student: true },
-        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-      });
+      if (isPaginated) {
+        const p = pageNum || 1;
+        const l = limitNum || 50;
+        const skip = (p - 1) * l;
+
+        [totalCount, payments] = await Promise.all([
+          prisma.payment.count({ where }),
+          prisma.payment.findMany({
+            where,
+            include: { student: true },
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+            skip,
+            take: l,
+          }),
+        ]);
+      } else {
+        payments = await prisma.payment.findMany({
+          where,
+          include: { student: true },
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        });
+        totalCount = payments.length;
+      }
     } catch (err) {
       payments = [];
     }
 
-    const filtered = payments
-      .filter((p) => {
-        if (!p.student) return false;
-        if (!cleanQuery) return true;
-        const target = `${p.student.name} ${p.receiptNo}`.toLowerCase();
-        return target.includes(cleanQuery);
-      })
+    const formatted = payments
+      .filter((p) => Boolean(p.student))
       .map((p) => ({
         id: p.id,
         receiptNo: p.receiptNo,
@@ -38,7 +67,21 @@ export class PaymentService {
         remainingAfter: Number(p.remainingAfter),
       }));
 
-    return filtered;
+    if (isPaginated) {
+      const p = pageNum || 1;
+      const l = limitNum || 50;
+      return {
+        data: formatted,
+        pagination: {
+          total: totalCount,
+          page: p,
+          limit: l,
+          totalPages: Math.ceil(totalCount / l),
+        },
+      };
+    }
+
+    return formatted;
   }
 
   static async getNextReceiptNo() {

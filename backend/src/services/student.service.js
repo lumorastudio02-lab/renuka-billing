@@ -89,7 +89,7 @@ export class StudentService {
     }
   }
 
-  static async getAllStudents({ query, course, batch }) {
+  static async getAllStudents({ query, course, batch, page, limit }) {
     const where = {
       OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
       ...(course ? { course } : {}),
@@ -111,13 +111,37 @@ export class StudentService {
       ];
     }
 
+    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : null;
+    const limitNum = limit ? Math.max(1, parseInt(limit, 10) || 50) : null;
+    const isPaginated = pageNum !== null || limitNum !== null;
+
     let students = [];
+    let totalCount = 0;
+
     try {
-      students = await prisma.student.findMany({
-        where,
-        orderBy: [{ course: 'asc' }, { batch: 'asc' }, { name: 'asc' }],
-        include: { payments: true },
-      });
+      if (isPaginated) {
+        const p = pageNum || 1;
+        const l = limitNum || 50;
+        const skip = (p - 1) * l;
+
+        [totalCount, students] = await Promise.all([
+          prisma.student.count({ where }),
+          prisma.student.findMany({
+            where,
+            orderBy: [{ course: 'asc' }, { batch: 'asc' }, { name: 'asc' }],
+            skip,
+            take: l,
+            include: { payments: true },
+          }),
+        ]);
+      } else {
+        students = await prisma.student.findMany({
+          where,
+          orderBy: [{ course: 'asc' }, { batch: 'asc' }, { name: 'asc' }],
+          include: { payments: true },
+        });
+        totalCount = students.length;
+      }
     } catch (err) {
       console.error('Error fetching students from MongoDB:', err);
       students = [];
@@ -133,7 +157,7 @@ export class StudentService {
       return dateObj.toISOString().slice(0, 10);
     };
 
-    return students.map((s) => ({
+    const formatted = students.map((s) => ({
       id: s.studentCode || s.id,
       internalId: s.id,
       name: s.name,
@@ -149,11 +173,30 @@ export class StudentService {
       nextDueDate: formatDateStr(s.nextDueDate),
       status: calculateDueStatus(s),
     }));
+
+    if (isPaginated) {
+      const p = pageNum || 1;
+      const l = limitNum || 50;
+      return {
+        data: formatted,
+        pagination: {
+          total: totalCount,
+          page: p,
+          limit: l,
+          totalPages: Math.ceil(totalCount / l),
+        },
+      };
+    }
+
+    return formatted;
   }
 
   static async getNextStudentId(course) {
     const prefix = (course && course.trim() ? course.trim().charAt(0) : 'S').toUpperCase();
     const students = await prisma.student.findMany({
+      where: {
+        studentCode: { startsWith: prefix },
+      },
       select: { studentCode: true },
     });
 

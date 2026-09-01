@@ -6,7 +6,7 @@ import path from 'path';
 import { env } from './config/env.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { errorHandler } from './middleware/error-handler.js';
-import { apiLimiter } from './middleware/rate-limiter.js';
+import { apiLimiter, authLimiter } from './middleware/rate-limiter.js';
 import routes from './routes/index.js';
 import { ApiResponse } from './utils/api-response.js';
 import { logger } from './config/logger.js';
@@ -28,7 +28,7 @@ const corsOptions = {
     if (origins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -47,7 +47,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 
 // Rate Limiting
+app.use('/api/v1/auth/login', authLimiter);
 app.use('/api', apiLimiter);
+
 
 // Serve static uploads
 app.use('/uploads', express.static(path.resolve(env.UPLOAD_PATH)));
